@@ -5,26 +5,55 @@ from pyamf.remoting.client import RemotingService
 
 handle = int(sys.argv[1])
 
+categoryData = {
+    'live'   : { 
+                 'name' : 'Live', 
+                 'icon' : 'menu_logo.jpg',
+                 'serviceName' : 'com.brightcove.experience.ExperienceRuntimeFacade',
+                 'serviceUrl' : 'http://c.brightcove.com/services/messagebroker/amf?playerKey=AQ~~,AAABtXvbPVE~,ZfNKKkFP3R-R8qlcWfs20DL-8Bvb6UcW',
+                 'serviceKey' : 'aa3634a3b4371a1c2f780f830dc2fd1ef4bbb111',
+                 'playerId' : 1905932797001
+    },
+    'replay' : { 
+                 'name' : 'Replay',
+                 'icon' : 'menu_logo.jpg',
+                 'serviceName' : 'com.brightcove.experience.ExperienceRuntimeFacade',
+                 'serviceUrl' : 'http://c.brightcove.com/services/messagebroker/amf?playerKey=AQ~~,AAABtXvbPVE~,ZfNKKkFP3R8lv_FZU4AZv5yZg6d3YSFW',
+                 'serviceKey' : 'f7d4096475cca62e0afb88633662b4df1f429b98',
+                 'playerId' : 1933244636001
+    }
+}
+
 def showCategories():
-    categories = [
-        # { 'name' : 'Live', 'url' : '/tvpatrollive' },
-        { 'name' : 'Replay', 'url' : '/tvpatrolreplay' }
-    ]
-    for c in categories:
-        addDir(c['name'], c['url'], 1, 'menu_logo.png')
+    c = categoryData['live']
+    addDir(c['name'], 'live', 1, c['icon'])
+    c = categoryData['replay']
+    addDir(c['name'], 'replay', 1, c['icon'])        
+        
         
 def showEpisodes(url):
-    client = RemotingService('http://c.brightcove.com/services/messagebroker/amf?playerKey=AQ~~,AAABtXvbPVE~,ZfNKKkFP3R8lv_FZU4AZv5yZg6d3YSFW')
-    service = client.getService('com.brightcove.experience.ExperienceRuntimeFacade')
-    data = service.getProgrammingForExperience('f7d4096475cca62e0afb88633662b4df1f429b98', 1933244636001)
-    pattern = re.compile(r'/ondemand/&(mp4:.+\.mp4)\?')
-    for d in data['playlistTabs']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']:
-        url = d['FLVFullLengthURL']
-        m = pattern.search(url)
-        app = 'ondemand'
-        playPath = m.group(1)
-        url = url.replace('/ondemand/&mp4', '/ondemand/mp4')
-        addLink(d['displayName'], url, d['displayName'], d['thumbnailURL'], app, playPath)
+    c = categoryData[url]
+    client = RemotingService(c['serviceUrl'])
+    service = client.getService(c['serviceName'])
+    data = service.getProgrammingForExperience(c['serviceKey'], c['playerId'])
+    if url == 'live':
+        for d in data['playlistCombo']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']:
+            addLink(d['displayName'], d['FLVFullLengthURL'], d['displayName'], '', None, None)
+            #if d['FLVFullLengthStreamed']:
+            #    addLink(d['displayName'], d['FLVFullLengthURL'], d['displayName'], '', 'live', 'LS_TVPatrol')
+            #else:
+            #    addLink(d['displayName'], d['FLVFullLengthURL'], d['displayName'], '', None, None)
+    elif url == 'replay':
+        pattern = re.compile(r'/ondemand/&(mp4:.+\.mp4)\?')
+        for d in data['playlistTabs']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']:
+            url = d['FLVFullLengthURL']
+            m = pattern.search(url)
+            app = 'ondemand'
+            playPath = m.group(1)
+            url = url.replace('/ondemand/&mp4', '/ondemand/mp4')
+            addLink(d['displayName'], url, d['displayName'], d['thumbnailURL'], app, playPath)
+
+        
     
 def getParams():
     param={}
@@ -43,11 +72,13 @@ def getParams():
                             param[splitparams[0]]=splitparams[1]
     return param
 
-def addLink(name, url, title, iconimage, app, playPath):
+def addLink(name, url, title, iconimage, app = None, playPath = None):
     liz = xbmcgui.ListItem(name, iconImage = "DefaultVideo.png", thumbnailImage = iconimage)
     liz.setInfo(type = "Video", infoLabels = {"Title" : title})
-    liz.setProperty('app', app)
-    liz.setProperty('PlayPath',  playPath)
+    if app:
+        liz.setProperty('app', app)
+    if playPath:
+        liz.setProperty('PlayPath',  playPath)
     return xbmcplugin.addDirectoryItem(handle = handle, url = url, listitem = liz)
     
 def addDir(name,url,mode,iconimage):
