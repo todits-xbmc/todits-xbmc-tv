@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="plugin.video.abscbn.stream" name="ABS-CBN Streaming" version="0.0.1" provider-name="todits.xbmc">
+    <requires>
+        <import addon="xbmc.python" version="1.0"/>
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="default.py">
+        <provides>video</provides>
+    </extension>
+  <extension point="xbmc.addon.metadata">
+    <platform>all</platform>
+    <summary>ABS-CBN Streaming</summary>
+    <description>This is still in Alpha. ABS-CBN streaming from ilive/sinipaay</description>
+  </extension>
+</addon>
