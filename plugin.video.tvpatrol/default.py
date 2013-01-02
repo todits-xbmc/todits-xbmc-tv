@@ -38,20 +38,23 @@ def showEpisodes(url):
     data = service.getProgrammingForExperience(c['serviceKey'], c['playerId'])
     if url == 'live':
         for d in data['playlistCombo']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']:
-            addLink(d['displayName'], d['FLVFullLengthURL'], d['displayName'], '', None, None)
-            #if d['FLVFullLengthStreamed']:
-            #    addLink(d['displayName'], d['FLVFullLengthURL'], d['displayName'], '', 'live', 'LS_TVPatrol')
-            #else:
-            #    addLink(d['displayName'], d['FLVFullLengthURL'], d['displayName'], '', None, None)
+            if d['FLVFullLengthStreamed']:
+                pattern = re.compile(r'/live/&(LS_TVPatrol.+)')
+                streamUrl = d['FLVFullLengthURL']
+                m = pattern.search(streamUrl)
+                playPath = m.group(1)
+                addLink(d['displayName'], streamUrl, d['displayName'], '', IsLive = '1', app = 'live', PlayPath = playPath)
+            else:
+                addLink(d['displayName'], d['FLVFullLengthURL'], d['displayName'], '', IsLive = '1')
     elif url == 'replay':
         pattern = re.compile(r'/ondemand/&(mp4:.+\.mp4)\?')
         for d in data['playlistTabs']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']:
-            url = d['FLVFullLengthURL']
-            m = pattern.search(url)
+            streamUrl = d['FLVFullLengthURL']
+            m = pattern.search(streamUrl)
             app = 'ondemand'
             playPath = m.group(1)
-            url = url.replace('/ondemand/&mp4', '/ondemand/mp4')
-            addLink(d['displayName'], url, d['displayName'], d['thumbnailURL'], app, playPath)
+            streamUrl = streamUrl.replace('/ondemand/&mp4', '/ondemand/mp4')
+            addLink(d['displayName'], streamUrl, d['displayName'], d['thumbnailURL'], app = app, PlayPath = playPath)
 
         
     
@@ -72,13 +75,11 @@ def getParams():
                             param[splitparams[0]]=splitparams[1]
     return param
 
-def addLink(name, url, title, iconimage, app = None, playPath = None):
+def addLink(name, url, title, iconimage, **kwargs):
     liz = xbmcgui.ListItem(name, iconImage = "DefaultVideo.png", thumbnailImage = iconimage)
     liz.setInfo(type = "Video", infoLabels = {"Title" : title})
-    if app:
-        liz.setProperty('app', app)
-    if playPath:
-        liz.setProperty('PlayPath',  playPath)
+    for k, v in kwargs.iteritems():
+        liz.setProperty(k, v)
     return xbmcplugin.addDirectoryItem(handle = handle, url = url, listitem = liz)
     
 def addDir(name,url,mode,iconimage):
