@@ -19,8 +19,8 @@
       </extension>
     </addon>
     
-    <addon id="plugin.video.abscbn.stream"
-           name="ABC-CBN Streaming"
+    <addon id="plugin.video.pinoytv"
+           name="Pinoy TV"
            version="0.0.1"
            provider-name="todits.xbmc">
       <requires>
@@ -31,8 +31,8 @@
             <provides>video</provides>
       </extension>
       <extension point="xbmc.addon.metadata">
-        <summary>ABS-CBN Streaming</summary>
-        <description>This is still in Alpha. ABS-CBN streaming from ilive/sinipaay</description>
+        <summary>Pinoy TV Channels</summary>
+        <description>This is still in Alpha. Pinoy TV Channels.</description>
         <platform>all</platform>
       </extension>
     </addon>
