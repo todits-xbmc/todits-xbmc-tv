@@ -6,7 +6,7 @@ handle = int(sys.argv[1])
 
 def showMenu():
     addDir('ABS-CBN', 'abscbnlive', 1, 'abscbn_logo.jpg')
-    addLink('PBA Live', 'rtmp://live.veemi.com:1935/', 'PBA Live', '', app = 'live', PlayPath = 'sportspbalive')
+    addLink('PBA Live', 'rtmp://85.12.5.5/vl/_definst_', 'PBA Live', '', app = 'vl/_definst_', PlayPath = 'sportspbalive', SWFPlayer = 'http://www.veemi.com/player/player-licensed.swf', PageURL = 'http://www.veemi.com', TcUrl = 'rtmp://85.12.5.5/vl/_definst_')
     
 def showSubMenu(url):
     if url == 'abscbnlive':
