@@ -88,52 +88,6 @@ def getBandilaMenu(streamType):
     brightCoveData = response['videoList']['mediaCollectionDTO']['videoDTOs']
         
     return getBrightCoveMenu(serviceData, streamType, brightCoveData)
-
-def getTvPatrolMenu_Orig(streamType = 'live'):
-    categoryData = {
-        'live'   : { 
-                     'name' : 'Live', 
-                     'icon' : 'tvpatrol_logo.jpg',
-                     'serviceName' : 'com.brightcove.experience.ExperienceRuntimeFacade',
-                     'serviceUrl' : 'http://c.brightcove.com/services/messagebroker/amf?playerKey=AQ~~,AAABtXvbPVE~,ZfNKKkFP3R-R8qlcWfs20DL-8Bvb6UcW',
-                     'serviceKey' : 'aa3634a3b4371a1c2f780f830dc2fd1ef4bbb111',
-                     'playerId' : 1905932797001
-        },
-        'ondemand' : { 
-                     'name' : 'Replay',
-                     'icon' : 'tvpatrol_logo.jpg',
-                     'serviceName' : 'com.brightcove.experience.ExperienceRuntimeFacade',
-                     'serviceUrl' : 'http://c.brightcove.com/services/messagebroker/amf?playerKey=AQ~~,AAABtXvbPVE~,ZfNKKkFP3R8lv_FZU4AZv5yZg6d3YSFW',
-                     'serviceKey' : 'f7d4096475cca62e0afb88633662b4df1f429b98',
-                     'playerId' : 1933244636001
-        }
-    }
-    c = categoryData[streamType]
-    client = RemotingService(c['serviceUrl'])
-    service = client.getService(c['serviceName'])
-    data = service.getProgrammingForExperience(c['serviceKey'], c['playerId'])
-    menu = []
-    if streamType == 'live':
-        for d in data['playlistCombo']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']:
-            if d['FLVFullLengthStreamed']:
-                pattern = re.compile(r'/live/&(LS_TVPatrol.+)')
-                streamUrl = d['FLVFullLengthURL']
-                m = pattern.search(streamUrl)
-                playPath = m.group(1)
-                menuItem = {'name' : d['displayName'], 'url' : streamUrl, 'title' : d['displayName'], 'icon' : '', 'isFolder' : False, 'extraArgs' : { 'IsLive' : '1', 'app' : 'live', 'PlayPath' : playPath}};
-            else:
-                menuItem = {'name' : d['displayName'], 'url' : d['FLVFullLengthURL'], 'title' : d['displayName'], 'icon' : '', 'isFolder' : False, 'extraArgs' : { 'IsLive' : '1'}};
-            menu.append(menuItem)
-    elif streamType == 'replay':
-        pattern = re.compile(r'/ondemand/&(mp4:.+\.mp4)\?')
-        for d in data['playlistTabs']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']:
-            streamUrl = d['FLVFullLengthURL']
-            m = pattern.search(streamUrl)
-            app = 'ondemand'
-            playPath = m.group(1)
-            streamUrl = streamUrl.replace('/ondemand/&mp4', '/ondemand/mp4')
-            menu.append({'name' : d['displayName'], 'url' : streamUrl, 'title' : d['displayName'], 'icon' : d['thumbnailURL'], 'isFolder' : False, 'extraArgs' : { 'app' : app, 'PlayPath' : playPath}})
-    return menu
     
 def callBrightCoveService(serviceData, streamType):
     c = serviceData[streamType]
