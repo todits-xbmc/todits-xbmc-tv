@@ -4,6 +4,7 @@ import xbmcgui, xbmcplugin
 from pyamf.remoting.client import RemotingService
 
 handle = int(sys.argv[1])
+userAgent = 'Mozilla/5.0 (X11; Linux x86_64; rv:17.0) Gecko/20100101 Firefox/17.0'
 
 def getMenu(id):
     if id == 'tvpatrol-live':
@@ -91,7 +92,7 @@ def getBandilaMenu(streamType):
     
 def callBrightCoveService(serviceData, streamType):
     c = serviceData[streamType]
-    client = RemotingService(c['serviceUrl'])
+    client = RemotingService(c['serviceUrl'], user_agent = userAgent)
     service = client.getService(c['serviceName'])
     return service.getProgrammingForExperience(c['serviceKey'], c['playerId'])
     
@@ -144,7 +145,6 @@ def getAbsCbnLiveMenu():
 def displayMenu(id):
     for m in getMenu(id):
         if m['isFolder'] == True:
-            print m
             addDir(m['name'], m['id'], m['icon'])
         else:
             addLink(m['name'], m['url'], m['title'], m['icon'], **m['extraArgs'])
