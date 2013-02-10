@@ -20,7 +20,8 @@ def showCategories():
         { 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live' }
     ]
     for c in categories:
-        addDir(c['name'], c['url'], 1, 'menu_logo.png')
+        addDir(c['name'], c['url'], 1, 'icon.png')
+    return True
 
 def showSubCategories(url):
     jsonData = callServiceApi(url)
@@ -28,6 +29,7 @@ def showSubCategories(url):
     subCategories = []
     for s in subCatList:
         addDir(s['name'], '/Category/List/%s' % s['id'], 2, 'menu_logo.png')
+    return True
         
 def showShows(url):
     htmlData = callServiceApi(url)
@@ -40,6 +42,7 @@ def showShows(url):
         thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
         url = url[0].replace('/Show/Details/', '/Show/_ShowEpisodes/')
         addDir(common.replaceHTMLCodes(title[0]), url, 3, thumbnail[0])
+    return True
         
 def showEpisodes(url):
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
@@ -50,22 +53,28 @@ def showEpisodes(url):
     episodeList = json.loads(jsonData)
     totalEpisodes = int(episodeList['total'])
     episodeCount = page * itemsPerPage
-    episodeCount = 0
+    listedEpisodes = 0
     for e in episodeList['data']:
         quality = int(xbmcplugin.getSetting(thisPlugin,'quality'))
         jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (e['EpisodeId'], quality + 1))
         episodeDetails = json.loads(jsonData)
+        print episodeDetails
         if episodeDetails['errorCode'] == 0:
-            episodeCount += 1
-            if episodeCount == 1:
+            listedEpisodes += 1
+            if listedEpisodes == 1:
                 if totalEpisodes > episodeCount:
                     addDir("Next >>",  url, 3, thumbnail, page + 1)
             itemUrl = episodeDetails['data']['Url']
             addLink(e['DateAiredStr'], itemUrl, '', '')
-    if episodeCount == 0:
+        else:
+            break
+    if listedEpisodes == 0:
         dialog = xbmcgui.Dialog()
-        dialog.ok("No Episodes Found", "Could not find this show in your TFC.tv subscription.")
-        
+        dialog.ok("Not Subscribed To This Item", "Could not find this item in your TFC.tv subscription.")
+        return False
+    else:
+        return True
+
 def callServiceApi(path, params = {}, headers = []):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
     headers.append(('User-Agent', userAgent))
@@ -150,14 +159,16 @@ except:
     
 login()
 
+success = False
 if mode == None or url == None or len(url) < 1:
-    showCategories()
+    success = showCategories()
 elif mode == 1:
-    showSubCategories(url)
+    success = showSubCategories(url)
 elif mode == 2:
-    showShows(url)
+    success = showShows(url)
 elif mode == 3:
-    showEpisodes(url)
+    success = showEpisodes(url)
 
-xbmcplugin.endOfDirectory(thisPlugin)
+if success == True:
+    xbmcplugin.endOfDirectory(thisPlugin)
 
