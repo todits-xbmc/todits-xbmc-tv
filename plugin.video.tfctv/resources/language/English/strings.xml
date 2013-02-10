@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<strings>
+    <string id="50100">Settings</string>
+	<string id="50101">Items Per Page</string>
+	<string id="50102">Quality</string>
+	<string id="50200">TFC.tv Account</string>
+	<string id="50201">Email Address</string>
+	<string id="50202">Password</string>
+	<string id="56000">Login Failed</string>
+</strings>
+
