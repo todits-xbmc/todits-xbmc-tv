@@ -1,5 +1,5 @@
     
-import sys, urllib, urllib2, json, cookielib
+import sys, urllib, urllib2, json, cookielib, time
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 
 thisPlugin = int(sys.argv[1])
@@ -35,13 +35,30 @@ def showShows(url):
     htmlData = callServiceApi(url)
     latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
     latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
+    listSubscribedFirst = xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' if True else False
+    print listSubscribedFirst
+    unsubscribedShows = []
+    subscribedShowIds = []
+    if listSubscribedFirst:
+        subscribedShowIds = getSubscribedShowIds()
     for showHtml in latestShows:
         spanTitle = common.parseDOM(showHtml, "span", attrs = {'class' : 'showTitle'})
         title = common.parseDOM(spanTitle[0], "a")
         url = common.parseDOM(spanTitle[0], "a", ret = 'href')
         thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
         url = url[0].replace('/Show/Details/', '/Show/_ShowEpisodes/')
-        addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0])
+        showId = int(url.replace('/Show/_ShowEpisodes/', ''))
+        if listSubscribedFirst:
+            if showId in subscribedShowIds:
+                # add it now
+                addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0])
+            else:
+                # will add them later
+                unsubscribedShows.append((common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0]))
+        else:
+            addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0])
+    for u in unsubscribedShows:
+        addDir('[I]' + u[0] + '[/I]', u[1], u[2], u[3])
     return True
         
 def showEpisodes(url):
@@ -74,11 +91,26 @@ def playEpisode(episodeId):
     return False
 
         
-def getEntitlements():
+def getSubscribedShowIds():
     params = { 'page' : 1, 'size' : 1000 }
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
         ('X-Requested-With', 'XMLHttpRequest')]
-    jsonData = callServiceApi("/_Entitlements", params, headers)
+    jsonData = callServiceApi("/User/_Entitlements", params, headers)
+    entitlementsData = json.loads(jsonData)
+    showIds = []
+    if entitlementsData['total'] > 1000:
+        params = { 'page' : 1, 'size' : entitlementsData['total'] }
+        jsonData = callServiceApi("/_Entitlements", params, headers)
+    for e in entitlementsData['data']:
+        expiry = int(e['ExpiryDate'].replace('/Date(','').replace(')/', ''))
+        if expiry >= (time.time() * 1000):
+            jsonData = callServiceApi("/Packages/GetShows?packageId=%s" % (e['PackageId']))
+            packagesData = json.loads(jsonData)
+            for p in packagesData:
+                showIds.append(p['ShowId'])
+        else:
+            break
+    return showIds
     
 
 def callServiceApi(path, params = {}, headers = []):
