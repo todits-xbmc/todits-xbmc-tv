@@ -45,7 +45,6 @@ def showShows(url):
     return True
         
 def showEpisodes(url):
-    print url
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
         ('X-Requested-With', 'XMLHttpRequest')]
     itemsPerPage = int(xbmcplugin.getSetting(thisPlugin,'itemsPerPage'))
@@ -54,26 +53,26 @@ def showEpisodes(url):
     episodeList = json.loads(jsonData)
     totalEpisodes = int(episodeList['total'])
     episodeCount = page * itemsPerPage
-    listedEpisodes = 0
+    if totalEpisodes > episodeCount:
+        addDir("Next >>",  url, 3, thumbnail, page + 1)
     for e in episodeList['data']:
-        quality = int(xbmcplugin.getSetting(thisPlugin,'quality'))
-        jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (e['EpisodeId'], quality + 1))
-        episodeDetails = json.loads(jsonData)
-        if episodeDetails['errorCode'] == 0:
-            listedEpisodes += 1
-            if listedEpisodes == 1:
-                if totalEpisodes > episodeCount:
-                    addDir("Next >>",  url, 3, thumbnail, page + 1)
-            itemUrl = episodeDetails['data']['Url']
-            addLink(e['DateAiredStr'], itemUrl, '', '')
-        else:
-            break
-    if listedEpisodes == 0:
-        dialog = xbmcgui.Dialog()
-        dialog.ok("Not Subscribed To This Item", "Could not find this item in your TFC.tv subscription.")
-        return False
+        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, '')
+    return True
+        
+def playEpisode(episodeId):
+    quality = int(xbmcplugin.getSetting(thisPlugin,'quality'))
+    jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1))
+    episodeDetails = json.loads(jsonData)
+    if episodeDetails['errorCode'] == 0:
+        liz=xbmcgui.ListItem(name, iconImage="DefaultVideo.png")
+        liz.setInfo( type="Video", infoLabels={ "Title": name } )
+        url = episodeDetails['data']['Url']
+        xbmc.Player().play(url, liz)
     else:
-        return True
+        dialog = xbmcgui.Dialog()
+        dialog.ok("Not Subscribed To This Item", "This item is not included in your subscription.")
+    return False
+
         
 def getEntitlements():
     params = { 'page' : 1, 'size' : 1000 }
@@ -170,6 +169,8 @@ elif mode == 2:
     success = showShows(url)
 elif mode == 3:
     success = showEpisodes(url)
+elif mode == 4:
+    success = playEpisode(url)
 
 if success == True:
     xbmcplugin.endOfDirectory(thisPlugin)
