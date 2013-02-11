@@ -14,19 +14,19 @@ cookieJar = cookielib.CookieJar()
 
 def showCategories():
     categories = [
-        { 'name' : 'Entertainment', 'url' : '/Menu/BuildMenuGroup/Entertainment' },
-        { 'name' : 'News', 'url' : '/Menu/BuildMenuGroup/News' },
-        { 'name' : 'Movies', 'url' : '/Menu/BuildMenuGroup/Movies' },
-        { 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live' }
+        { 'name' : 'Entertainment', 'url' : '/Menu/BuildMenuGroup/Entertainment', 'mode' : 1 },
+        { 'name' : 'News', 'url' : '/Menu/BuildMenuGroup/News', 'mode' : 1 },
+        { 'name' : 'Movies', 'url' : '/Menu/BuildMenuGroup/Movies', 'mode' : 1 },
+        { 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
+        { 'name' : 'Free TV', 'url' : '/Show/_ShowEpisodes/929', 'mode' : 3 }
     ]
     for c in categories:
-        addDir(c['name'], c['url'], 1, 'icon.png')
+        addDir(c['name'], c['url'], c['mode'], 'icon.png')
     return True
 
 def showSubCategories(url):
     jsonData = callServiceApi(url)
     subCatList = json.loads(jsonData)
-    subCategories = []
     for s in subCatList:
         addDir(s['name'], '/Category/List/%s' % s['id'], 2, 'menu_logo.png')
     return True
@@ -45,6 +45,7 @@ def showShows(url):
     return True
         
 def showEpisodes(url):
+    print url
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
         ('X-Requested-With', 'XMLHttpRequest')]
     itemsPerPage = int(xbmcplugin.getSetting(thisPlugin,'itemsPerPage'))
@@ -58,7 +59,6 @@ def showEpisodes(url):
         quality = int(xbmcplugin.getSetting(thisPlugin,'quality'))
         jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (e['EpisodeId'], quality + 1))
         episodeDetails = json.loads(jsonData)
-        print episodeDetails
         if episodeDetails['errorCode'] == 0:
             listedEpisodes += 1
             if listedEpisodes == 1:
@@ -74,13 +74,23 @@ def showEpisodes(url):
         return False
     else:
         return True
+        
+def getEntitlements():
+    params = { 'page' : 1, 'size' : 1000 }
+    headers = [('Content-type', 'application/x-www-form-urlencoded'),
+        ('X-Requested-With', 'XMLHttpRequest')]
+    jsonData = callServiceApi("/_Entitlements", params, headers)
+    
 
 def callServiceApi(path, params = {}, headers = []):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
     headers.append(('User-Agent', userAgent))
     opener.addheaders = headers
-    data_encoded = urllib.urlencode(params)
-    response = opener.open(baseUrl + path, data_encoded)
+    if params:
+        data_encoded = urllib.urlencode(params)
+        response = opener.open(baseUrl + path, data_encoded)
+    else:
+        response = opener.open(baseUrl + path)
     return response.read()
 
 def login():
@@ -120,14 +130,6 @@ def addDir(name, url, mode, thumbnail, page = 1):
     liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=thumbnail)
     liz.setInfo( type="Video", infoLabels={ "Title": name } )
     return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=True)
-    
-#def addDir(name, url, mode, icon):
-#    u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"name="+urllib.quote_plus(name)
-#    success = True
-#    li=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=icon)
-#    li.setInfo( type="Video", infoLabels={ "Title": name })
-#    success = xbmcplugin.addDirectory(handle=thisPlugin, url=u, listitem=li, isFolder=True)
-#    return success
 
 params=getParams()
 url=None
