@@ -36,7 +36,6 @@ def showShows(url):
     latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
     latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
     listSubscribedFirst = xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' if True else False
-    print listSubscribedFirst
     unsubscribedShows = []
     subscribedShowIds = []
     if listSubscribedFirst:
@@ -51,7 +50,9 @@ def showShows(url):
         if listSubscribedFirst:
             if showId in subscribedShowIds:
                 # add it now
-                addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0])
+                docName = thumbnail[0][(thumbnail[0].rfind('/') + 1):]
+                thumbnail = thumbnail[0].replace(docName, urllib.quote(docName))
+                addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail)
             else:
                 # will add them later
                 unsubscribedShows.append((common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0]))
