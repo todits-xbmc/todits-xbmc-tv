@@ -21,7 +21,7 @@
     
     <addon id="plugin.video.tfctv"
            name="TFC.tv"
-           version="0.0.4"
+           version="0.0.5"
            provider-name="todits.xbmc">
       <requires>
         <import addon="xbmc.python" version="1.0"/>
@@ -32,7 +32,7 @@
             <provides>video</provides>
       </extension>
       <extension point="xbmc.addon.metadata">
-        <summary>TFC.tv Subscription</summary>
+        <summary>TFC.tv</summary>
         <description>This is still in Alpha. Subscription to TFC.tv is required.</description>
         <platform>all</platform>
       </extension>
