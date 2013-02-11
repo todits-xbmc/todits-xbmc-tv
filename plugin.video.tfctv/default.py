@@ -41,7 +41,7 @@ def showShows(url):
         url = common.parseDOM(spanTitle[0], "a", ret = 'href')
         thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
         url = url[0].replace('/Show/Details/', '/Show/_ShowEpisodes/')
-        addDir(common.replaceHTMLCodes(title[0]), url, 3, thumbnail[0])
+        addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0])
     return True
         
 def showEpisodes(url):
