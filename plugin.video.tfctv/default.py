@@ -88,7 +88,8 @@ def playEpisode(episodeId):
         xbmc.Player().play(url, liz)
     else:
         dialog = xbmcgui.Dialog()
-        dialog.ok("Not Subscribed To This Item", "This item is not included in your subscription.")
+        dialog.ok("Could Not Play Item", "- This item is not part of your subscription", 
+"- Or your subscription is already expired", "- Or your email and/or password is incorrect")
     return False
 
         
@@ -131,9 +132,9 @@ def login():
     formdata = { "EmailAddress" : emailAddress, "Password": password }
     jsonData = callServiceApi("/User/_Login", formdata)
     loginData = json.loads(jsonData)
-    if loginData['errorCode'] != 0:
-        dialog = xbmcgui.Dialog()
-        dialog.ok("Login failed", loginData['errorMessage'])
+    #if loginData['errorCode'] != 0:
+    #    dialog = xbmcgui.Dialog()
+    #    dialog.ok("Login failed", loginData['errorMessage'])
     
 def getParams():
     param={}

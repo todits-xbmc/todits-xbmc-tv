@@ -1,0 +1,16 @@
+0.0.6
+    Removed invalid login dialog
+    Updated temporary message for non-playable items
+
+0.0.5
+    Fixed missing thumbnail
+    Option to show subscribed shows first
+    
+0.0.4
+    Improved loading of episodes
+    Fixed unicode error when displaying title
+    Added Free TV
+    
+0.0.3
+    Added features
+    Bug fixes
