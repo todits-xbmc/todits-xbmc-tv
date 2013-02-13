@@ -1,3 +1,5 @@
+0.0.8
+    Improved performance
 0.0.7
     Separate settings for showing subscribed shows first and showing them in Italics
     Fixed thumbnail when showing episodes and playing the episode
