@@ -1,3 +1,7 @@
+0.0.7
+    Separate settings for showing subscribed shows first and showing them in Italics
+    Fixed thumbnail when showing episodes and playing the episode
+    Updated User-Agent
 0.0.6
     Removed invalid login dialog
     Updated temporary message for non-playable items

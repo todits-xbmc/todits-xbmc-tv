@@ -8,7 +8,7 @@ import CommonFunctions
 common = CommonFunctions
 common.plugin = xbmcaddon.Addon().getAddonInfo('name')
 
-userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0'
+userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0'
 baseUrl = 'http://tfc.tv'
 cookieJar = cookielib.CookieJar()
 
@@ -35,31 +35,39 @@ def showShows(url):
     htmlData = callServiceApi(url)
     latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
     latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
-    listSubscribedFirst = xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' if True else False
+    listSubscribedFirst = True if xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' else False
+    italiciseUnsubscribed = True if xbmcplugin.getSetting(thisPlugin,'italiciseUnsubscribed') == 'true' else False
+    subscribedShowIds = getSubscribedShowIds()
     unsubscribedShows = []
-    subscribedShowIds = []
-    if listSubscribedFirst:
-        subscribedShowIds = getSubscribedShowIds()
+    subscribedShows = []
     for showHtml in latestShows:
         spanTitle = common.parseDOM(showHtml, "span", attrs = {'class' : 'showTitle'})
         title = common.parseDOM(spanTitle[0], "a")
+        showTitle = common.replaceHTMLCodes(title[0].encode('utf8'))
         url = common.parseDOM(spanTitle[0], "a", ret = 'href')
         thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
         url = url[0].replace('/Show/Details/', '/Show/_ShowEpisodes/')
         showId = int(url.replace('/Show/_ShowEpisodes/', ''))
+        urlDocName = thumbnail[0][(thumbnail[0].rfind('/') + 1):]
+        thumbnail = thumbnail[0].replace(urlDocName, urllib.quote(urlDocName))
+        isSubscribed = False
+        if showId in subscribedShowIds:
+            isSubscribed = True
+        else:
+            isSubscribed = False
+            if italiciseUnsubscribed:
+                showTitle = '[I]' + showTitle + '[/I]'
         if listSubscribedFirst:
-            if showId in subscribedShowIds:
-                # add it now
-                docName = thumbnail[0][(thumbnail[0].rfind('/') + 1):]
-                thumbnail = thumbnail[0].replace(docName, urllib.quote(docName))
-                addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail)
+            if isSubscribed:
+                # add them now
+                addDir(showTitle, url, 3, thumbnail)
             else:
                 # will add them later
-                unsubscribedShows.append((common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0]))
+                unsubscribedShows.append((showTitle, url, 3, thumbnail))
         else:
-            addDir(common.replaceHTMLCodes(title[0].encode('utf8')), url, 3, thumbnail[0])
+            addDir(showTitle, url, 3, thumbnail)
     for u in unsubscribedShows:
-        addDir('[I]' + u[0] + '[/I]', u[1], u[2], u[3])
+        addDir(u[0], u[1], u[2], u[3])
     return True
         
 def showEpisodes(url):
@@ -74,7 +82,7 @@ def showEpisodes(url):
     if totalEpisodes > episodeCount:
         addDir("Next >>",  url, 3, thumbnail, page + 1)
     for e in episodeList['data']:
-        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, '')
+        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, thumbnail)
     return True
         
 def playEpisode(episodeId):
@@ -82,8 +90,8 @@ def playEpisode(episodeId):
     jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1))
     episodeDetails = json.loads(jsonData)
     if episodeDetails['errorCode'] == 0:
-        liz=xbmcgui.ListItem(name, iconImage="DefaultVideo.png")
-        liz.setInfo( type="Video", infoLabels={ "Title": name } )
+        liz=xbmcgui.ListItem(name, iconImage = "DefaultVideo.png", thumbnailImage = thumbnail)
+        liz.setInfo( type="Video", infoLabels = { "Title": name } )
         url = episodeDetails['data']['Url']
         xbmc.Player().play(url, liz)
     else:
@@ -188,7 +196,7 @@ try:
 except:
     pass
 try:
-    thumbnail=int(params["thumbnail"])
+    thumbnail=urllib.unquote_plus(params["thumbnail"])
 except:
     pass
     
