@@ -1,16 +1,6 @@
-    
-import sys, urllib, urllib2, json, cookielib, time
+import sys, urllib, urllib2, json, cookielib, time, os.path
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
-
-thisPlugin = int(sys.argv[1])
-
 import CommonFunctions
-common = CommonFunctions
-common.plugin = xbmcaddon.Addon().getAddonInfo('name')
-
-userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0'
-baseUrl = 'http://tfc.tv'
-cookieJar = cookielib.CookieJar()
 
 def showCategories():
     categories = [
@@ -37,7 +27,10 @@ def showShows(url):
     latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
     listSubscribedFirst = True if xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' else False
     italiciseUnsubscribed = True if xbmcplugin.getSetting(thisPlugin,'italiciseUnsubscribed') == 'true' else False
-    subscribedShowIds = getSubscribedShowIds()
+    subscribedShowIds = []
+    if listSubscribedFirst or italiciseUnsubscribed: 
+        # make an API call only if we're checking against subscribed shows
+        subscribedShowIds = getSubscribedShowIds()
     unsubscribedShows = []
     subscribedShows = []
     for showHtml in latestShows:
@@ -66,6 +59,7 @@ def showShows(url):
                 unsubscribedShows.append((showTitle, url, 3, thumbnail))
         else:
             addDir(showTitle, url, 3, thumbnail)
+    # this will not be populated if we're not listing subscribed shows first
     for u in unsubscribedShows:
         addDir(u[0], u[1], u[2], u[3])
     return True
@@ -87,9 +81,18 @@ def showEpisodes(url):
         
 def playEpisode(episodeId):
     quality = int(xbmcplugin.getSetting(thisPlugin,'quality'))
-    jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1))
-    episodeDetails = json.loads(jsonData)
-    if episodeDetails['errorCode'] == 0:
+    errorCode = -1
+    jsonData = ''
+    episodeDetails = {}
+    for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
+        jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1))
+        episodeDetails = json.loads(jsonData)
+        errorCode = episodeDetails['errorCode']
+        if errorCode == 0:
+            break
+        else:
+            login()
+    if errorCode == 0:
         liz=xbmcgui.ListItem(name, iconImage = "DefaultVideo.png", thumbnailImage = thumbnail)
         liz.setInfo( type="Video", infoLabels = { "Title": name } )
         url = episodeDetails['data']['Url']
@@ -105,8 +108,15 @@ def getSubscribedShowIds():
     params = { 'page' : 1, 'size' : 1000 }
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
         ('X-Requested-With', 'XMLHttpRequest')]
-    jsonData = callServiceApi("/User/_Entitlements", params, headers)
-    entitlementsData = json.loads(jsonData)
+    jsonData = ''
+    entitlementsData = {}
+    for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
+        jsonData = callServiceApi("/User/_Entitlements", params, headers)
+        entitlementsData = json.loads(jsonData)
+        if entitlementsData['total'] != 0:
+            break
+        else:
+            login()
     showIds = []
     if entitlementsData['total'] > 1000:
         params = { 'page' : 1, 'size' : entitlementsData['total'] }
@@ -118,8 +128,6 @@ def getSubscribedShowIds():
             packagesData = json.loads(jsonData)
             for p in packagesData:
                 showIds.append(p['ShowId'])
-        else:
-            break
     return showIds
     
 
@@ -135,14 +143,12 @@ def callServiceApi(path, params = {}, headers = []):
     return response.read()
 
 def login():
+    cookieJar.clear()
     emailAddress = xbmcplugin.getSetting(thisPlugin,'emailAddress')
     password = xbmcplugin.getSetting(thisPlugin,'password')
     formdata = { "EmailAddress" : emailAddress, "Password": password }
     jsonData = callServiceApi("/User/_Login", formdata)
     loginData = json.loads(jsonData)
-    #if loginData['errorCode'] != 0:
-    #    dialog = xbmcgui.Dialog()
-    #    dialog.ok("Login failed", loginData['errorMessage'])
     
 def getParams():
     param={}
@@ -172,6 +178,19 @@ def addDir(name, url, mode, thumbnail, page = 1):
     liz.setInfo( type="Video", infoLabels={ "Title": name } )
     return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=True)
 
+common = CommonFunctions
+common.plugin = xbmcaddon.Addon().getAddonInfo('name')
+
+thisPlugin = int(sys.argv[1])
+userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0'
+baseUrl = 'http://tfc.tv'
+cookieFile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')), 'tfctv.cookie')
+cookieJar = cookielib.LWPCookieJar(cookieFile)
+try:
+    cookieJar.load()
+except:
+    login()
+
 params=getParams()
 url=None
 name=None
@@ -200,7 +219,7 @@ try:
 except:
     pass
     
-login()
+#login()
 
 success = False
 if mode == None or url == None or len(url) < 1:
@@ -217,3 +236,4 @@ elif mode == 4:
 if success == True:
     xbmcplugin.endOfDirectory(thisPlugin)
 
+cookieJar.save()
