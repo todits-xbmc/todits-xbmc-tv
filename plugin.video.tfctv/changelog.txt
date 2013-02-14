@@ -1,3 +1,6 @@
+0.0.9
+    View subscribed shows
+    Watch subscribed shows through the "Subscribed Shows" menu; browsing through the normal categories is still broken
 0.0.8
     Improved performance
 0.0.7
