@@ -2,6 +2,12 @@ import sys, urllib, urllib2, json, cookielib, time, os.path
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 import CommonFunctions
 
+common = CommonFunctions
+common.plugin = xbmcaddon.Addon().getAddonInfo('name')
+
+# common.dbg = True # Default
+# common.dbglevel = 3 # Default
+
 def showCategories():
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
@@ -106,7 +112,7 @@ def playEpisode(episodeId):
 
         
 def getSubscribedShowIds():
-    getSubscribedShows()[0]
+    return getSubscribedShows()[0]
     
 def getSubscribedShows():
     params = { 'page' : 1, 'size' : 1000 }
@@ -204,9 +210,6 @@ def addDir(name, url, mode, thumbnail, page = 1):
     liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=thumbnail)
     liz.setInfo( type="Video", infoLabels={ "Title": name } )
     return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=True)
-
-common = CommonFunctions
-common.plugin = xbmcaddon.Addon().getAddonInfo('name')
 
 thisPlugin = int(sys.argv[1])
 userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0'
