@@ -1,3 +1,6 @@
+0.0.12
+    Bug fix
+    Browsing through the categories is working again
 0.0.11
     Re-login on Email or Password change
 0.0.10
