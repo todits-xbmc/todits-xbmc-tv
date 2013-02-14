@@ -30,8 +30,15 @@ def showSubCategories(url):
     return True
         
 def showShows(url):
-    htmlData = callServiceApi(url)
-    latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
+    htmlData = ''
+    latestShowsHtml = []
+    for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
+        htmlData = callServiceApi(url)
+        latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
+        if len(latestShowsHtml) > 0:
+            break
+        else:
+            login()
     latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
     listSubscribedFirst = True if xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' else False
     italiciseUnsubscribed = True if xbmcplugin.getSetting(thisPlugin,'italiciseUnsubscribed') == 'true' else False
