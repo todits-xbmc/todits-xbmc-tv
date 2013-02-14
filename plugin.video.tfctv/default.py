@@ -4,6 +4,7 @@ import CommonFunctions
 
 def showCategories():
     categories = [
+        { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
         { 'name' : 'Entertainment', 'url' : '/Menu/BuildMenuGroup/Entertainment', 'mode' : 1 },
         { 'name' : 'News', 'url' : '/Menu/BuildMenuGroup/News', 'mode' : 1 },
         { 'name' : 'Movies', 'url' : '/Menu/BuildMenuGroup/Movies', 'mode' : 1 },
@@ -105,6 +106,9 @@ def playEpisode(episodeId):
 
         
 def getSubscribedShowIds():
+    getSubscribedShows()[0]
+    
+def getSubscribedShows():
     params = { 'page' : 1, 'size' : 1000 }
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
         ('X-Requested-With', 'XMLHttpRequest')]
@@ -117,19 +121,42 @@ def getSubscribedShowIds():
             break
         else:
             login()
-    showIds = []
     if entitlementsData['total'] > 1000:
         params = { 'page' : 1, 'size' : entitlementsData['total'] }
         jsonData = callServiceApi("/_Entitlements", params, headers)
+    subscribedShows = []
+    showIds = []
     for e in entitlementsData['data']:
         expiry = int(e['ExpiryDate'].replace('/Date(','').replace(')/', ''))
         if expiry >= (time.time() * 1000):
             jsonData = callServiceApi("/Packages/GetShows?packageId=%s" % (e['PackageId']))
             packagesData = json.loads(jsonData)
             for p in packagesData:
-                showIds.append(p['ShowId'])
-    return showIds
+                if p['ShowId'] in showIds:
+                    pass
+                else:
+                    subscribedShows.append(p)
+                    showIds.append(p['ShowId'])
+    return showIds, subscribedShows
     
+def showSubscribedCategories(url):
+    subscribedShows = getSubscribedShows()[1]
+    categories = []
+    for s in subscribedShows:
+        if s['MainCategory'] in categories:
+            pass
+        else:
+            categories.append(s['MainCategory'])
+            addDir(s['MainCategory'], s['MainCategory'], 11, 'menu_logo.png')
+    return True
+    
+def showSubscribedShows(url):
+    subscribedShows = getSubscribedShows()[1]
+    for s in subscribedShows:
+        if s['MainCategory'] == url:
+            showTitle = common.replaceHTMLCodes(s['Show'].encode('utf8'))
+            addDir(s['Show'], '/Show/_ShowEpisodes/' + str(s['ShowId']), 3, 'menu_logo.png')
+    return True
 
 def callServiceApi(path, params = {}, headers = []):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
@@ -232,6 +259,10 @@ elif mode == 3:
     success = showEpisodes(url)
 elif mode == 4:
     success = playEpisode(url)
+elif mode == 10:
+    success = showSubscribedCategories(url)
+elif mode == 11:
+    success = showSubscribedShows(url)
 
 if success == True:
     xbmcplugin.endOfDirectory(thisPlugin)
