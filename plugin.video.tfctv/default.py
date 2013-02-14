@@ -9,6 +9,7 @@ common.plugin = xbmcaddon.Addon().getAddonInfo('name')
 # common.dbglevel = 3 # Default
 
 def showCategories():
+    checkAccountChange()
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
         { 'name' : 'Entertainment', 'url' : '/Menu/BuildMenuGroup/Entertainment', 'mode' : 1 },
@@ -182,6 +183,21 @@ def login():
     formdata = { "EmailAddress" : emailAddress, "Password": password }
     jsonData = callServiceApi("/User/_Login", formdata)
     loginData = json.loads(jsonData)
+    
+def checkAccountChange():
+    import hashlib
+    emailAddress = xbmcplugin.getSetting(thisPlugin,'emailAddress')
+    password = xbmcplugin.getSetting(thisPlugin,'password')
+    hash = hashlib.sha1(emailAddress + password).hexdigest()
+    hashFile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')), 'a.tmp')
+    savedHash = ''
+    if os.path.exists(hashFile):
+        with open(hashFile) as f:
+            savedHash = f.read()
+    if savedHash != hash:
+        login()
+    with open(hashFile, 'w') as f:
+        f.write(hash)
     
 def getParams():
     param={}
