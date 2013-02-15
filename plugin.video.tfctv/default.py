@@ -70,12 +70,13 @@ def showSubCategories(url):
 def showShows(url):
     htmlData = ''
     latestShowsHtml = []
+    cacheKey = url + ':v1'
     for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
-        latestShowsHtml = getFromCache(url)
+        latestShowsHtml = getFromCache(cacheKey)
         if latestShowsHtml == None:
             htmlData = callServiceApi(url)
             latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
-            setToCache(url, latestShowsHtml)
+            setToCache(cacheKey, latestShowsHtml)
         if len(latestShowsHtml) > 0:
             break
         else:
