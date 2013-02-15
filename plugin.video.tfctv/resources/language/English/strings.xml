@@ -1,14 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <strings>
     <string id="50100">Settings</string>
-	<string id="50101">Episodes Per Page</string>
-	<string id="50102">Quality</string>
-	<string id="50103">List subscribed shows first</string>
+    <string id="50101">Episodes Per Page</string>
+    <string id="50102">Quality</string>
+    <string id="50103">List subscribed shows first</string>
     <string id="50104">Show unsubscribed shows in [I]Italics[/I]</string>
-	<string id="50200">TFC.tv Account</string>
-	<string id="50201">Email Address</string>
-	<string id="50202">Password</string>
+    <string id="50200">TFC.tv Account</string>
+    <string id="50201">Email Address</string>
+    <string id="50202">Password</string>
+    <string id="50300">Cache Settings</string>
+    <string id="50301">Cache expiration (Hours)</string>
+    <string id="50302">Purge every (Days)</string>
+    <string id="50303">Enable Caching</string>
     <string id="50203">Login Retries</string>
-	<string id="56000">Login Failed</string>
+    <string id="56000">Login Failed</string>
 </strings>
 

@@ -1,7 +1,8 @@
-import sys, urllib, urllib2, json, cookielib, time, os.path
+import sys, urllib, urllib2, json, cookielib, time, os.path, hashlib
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
-import CommonFunctions
+from lib.SimpleCache import SimpleCache
 
+import CommonFunctions
 common = CommonFunctions
 common.plugin = xbmcaddon.Addon().getAddonInfo('name')
 
@@ -9,7 +10,11 @@ common.plugin = xbmcaddon.Addon().getAddonInfo('name')
 # common.dbglevel = 3 # Default
 
 def showCategories():
-    checkAccountChange()
+    accountChanged = checkAccountChange()
+    if accountChanged:
+        cleanCache(True)
+    else:
+        cleanCache(False)
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
         { 'name' : 'Entertainment', 'url' : '/Menu/BuildMenuGroup/Entertainment', 'mode' : 1 },
@@ -22,9 +27,42 @@ def showCategories():
         addDir(c['name'], c['url'], c['mode'], 'icon.png')
     return True
 
+def getFromCache(key):
+    try:
+        if isCacheEnabled:
+            cacheKey = hashlib.sha1(key).hexdigest()
+            return SimpleCache(cacheExpirySeconds).get(cacheKey)
+        else:
+            return None
+    except:
+        return None
+
+def setToCache(key, value):
+    try:
+        if isCacheEnabled:
+            cacheKey = hashlib.sha1(key).hexdigest()
+            SimpleCache(cacheExpirySeconds).set(cacheKey, value)
+    except:
+        pass
+
+def cleanCache(force = False):
+    try:
+        if isCacheEnabled:
+            purgeAfterSeconds = int(xbmcplugin.getSetting(thisPlugin,'purgeAfterDays')) * 24 * 60 * 60
+            if force:
+                purgeAfterSeconds = 0
+            return SimpleCache(cacheExpirySeconds).cleanCache(purgeAfterSeconds)
+        else:
+            return None
+    except:
+        return None
+
 def showSubCategories(url):
-    jsonData = callServiceApi(url)
-    subCatList = json.loads(jsonData)
+    subCatList = getFromCache(url)
+    if subCatList == None:
+        jsonData = callServiceApi(url)
+        subCatList = json.loads(jsonData)
+        setToCache(url, subCatList)
     for s in subCatList:
         addDir(s['name'], '/Category/List/%s' % s['id'], 2, 'menu_logo.png')
     return True
@@ -33,7 +71,10 @@ def showShows(url):
     htmlData = ''
     latestShowsHtml = []
     for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
-        htmlData = callServiceApi(url)
+        htmlData = getFromCache(url)
+        if htmlData == None:
+            htmlData = callServiceApi(url)
+            setToCache(url, htmlData)
         latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
         if len(latestShowsHtml) > 0:
             break
@@ -129,22 +170,32 @@ def getSubscribedShows():
     jsonData = ''
     entitlementsData = {}
     for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
-        jsonData = callServiceApi("/User/_Entitlements", params, headers)
-        entitlementsData = json.loads(jsonData)
+        url = "/User/_Entitlements"
+        entitlementsData = getFromCache(url)
+        if entitlementsData == None:
+            jsonData = callServiceApi(url, params, headers)
+            entitlementsData = json.loads(jsonData)
+            setToCache(url, entitlementsData)
         if entitlementsData['total'] != 0:
             break
         else:
             login()
     if entitlementsData['total'] > 1000:
         params = { 'page' : 1, 'size' : entitlementsData['total'] }
-        jsonData = callServiceApi("/_Entitlements", params, headers)
+        jsonData = callServiceApi("/User/_Entitlements", params, headers)
+        entitlementsData = json.loads(jsonData)
+        setToCache("/User/_Entitlements", entitlementsData)
     subscribedShows = []
     showIds = []
     for e in entitlementsData['data']:
         expiry = int(e['ExpiryDate'].replace('/Date(','').replace(')/', ''))
         if expiry >= (time.time() * 1000):
-            jsonData = callServiceApi("/Packages/GetShows?packageId=%s" % (e['PackageId']))
-            packagesData = json.loads(jsonData)
+            url = "/Packages/GetShows?packageId=%s" % (e['PackageId'])
+            packagesData = getFromCache(url)
+            if packagesData == None:
+                jsonData = callServiceApi(url)
+                packagesData = json.loads(jsonData)
+                setToCache(url, packagesData)
             for p in packagesData:
                 if p['ShowId'] in showIds:
                     pass
@@ -192,19 +243,21 @@ def login():
     loginData = json.loads(jsonData)
     
 def checkAccountChange():
-    import hashlib
     emailAddress = xbmcplugin.getSetting(thisPlugin,'emailAddress')
     password = xbmcplugin.getSetting(thisPlugin,'password')
     hash = hashlib.sha1(emailAddress + password).hexdigest()
     hashFile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')), 'a.tmp')
     savedHash = ''
+    accountChanged = False
     if os.path.exists(hashFile):
         with open(hashFile) as f:
             savedHash = f.read()
     if savedHash != hash:
         login()
+        accountChanged = True
     with open(hashFile, 'w') as f:
         f.write(hash)
+    return accountChanged
     
 def getParams():
     param={}
@@ -234,6 +287,7 @@ def addDir(name, url, mode, thumbnail, page = 1):
     liz.setInfo( type="Video", infoLabels={ "Title": name } )
     return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=True)
 
+
 thisPlugin = int(sys.argv[1])
 userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0'
 baseUrl = 'http://tfc.tv'
@@ -250,6 +304,9 @@ name=None
 mode=None
 page=1
 thumbnail = ''
+cacheExpirySeconds = int(xbmcplugin.getSetting(thisPlugin,'cacheHours')) * 60 * 60
+isCacheEnabled = True if xbmcplugin.getSetting(thisPlugin,'isCacheEnabled') == 'true' else False
+
 
 try:
     url=urllib.unquote_plus(params["url"])
@@ -272,8 +329,6 @@ try:
 except:
     pass
     
-#login()
-
 success = False
 if mode == None or url == None or len(url) < 1:
     success = showCategories()
