@@ -71,11 +71,11 @@ def showShows(url):
     htmlData = ''
     latestShowsHtml = []
     for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
-        htmlData = getFromCache(url)
-        if htmlData == None:
+        latestShowsHtml = getFromCache(url)
+        if latestShowsHtml == None:
             htmlData = callServiceApi(url)
-            setToCache(url, htmlData)
-        latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
+            latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
+            setToCache(url, latestShowsHtml)
         if len(latestShowsHtml) > 0:
             break
         else:
