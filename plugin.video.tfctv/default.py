@@ -256,8 +256,9 @@ def checkAccountChange():
     if savedHash != hash:
         login()
         accountChanged = True
-    with open(hashFile, 'w') as f:
-        f.write(hash)
+    if os.path.exists(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))):
+        with open(hashFile, 'w') as f:
+            f.write(hash)
     return accountChanged
     
 def getParams():
@@ -292,12 +293,18 @@ def addDir(name, url, mode, thumbnail, page = 1):
 thisPlugin = int(sys.argv[1])
 userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0'
 baseUrl = 'http://tfc.tv'
-cookieFile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')), 'tfctv.cookie')
-cookieJar = cookielib.LWPCookieJar(cookieFile)
-try:
-    cookieJar.load()
-except:
-    login()
+cookieJar = cookielib.CookieJar()
+cookieFile = ''
+cookieJarType = ''
+if os.path.exists(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))):
+    cookieFile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')), 'tfctv.cookie')
+    cookieJar = cookielib.LWPCookieJar(cookieFile)
+    cookieJarType = 'LWPCookieJar'
+if cookieJarType == 'LWPCookieJar':
+    try:
+        cookieJar.load()
+    except:
+        login()
 
 params=getParams()
 url=None
@@ -349,4 +356,5 @@ elif mode == 11:
 if success == True:
     xbmcplugin.endOfDirectory(thisPlugin)
 
-cookieJar.save()
+if cookieJarType == 'LWPCookieJar':
+    cookieJar.save()
