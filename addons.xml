@@ -2,11 +2,12 @@
 <addons>
     <addon id="plugin.video.pinoytv"
            name="Pinoy TV"
-           version="0.0.4"
+           version="0.0.5"
            provider-name="todits.xbmc">
       <requires>
         <import addon="xbmc.python" version="1.0"/>
         <import addon="script.module.pyamf" version="0.6.1"/>
+        <import addon="script.module.parsedom" version="0.9.1"/>
       </requires>
       <extension point="xbmc.python.pluginsource"
                 library="default.py">
