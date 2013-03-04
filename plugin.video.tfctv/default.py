@@ -81,7 +81,10 @@ def showShows(url):
             break
         else:
             login()
-    latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
+    if url == onlinePremierUrl:
+        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'floatLeft'})
+    else:
+        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
     listSubscribedFirst = True if xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' else False
     italiciseUnsubscribed = True if xbmcplugin.getSetting(thisPlugin,'italiciseUnsubscribed') == 'true' else False
     subscribedShowIds = []
@@ -91,13 +94,23 @@ def showShows(url):
     unsubscribedShows = []
     subscribedShows = []
     for showHtml in latestShows:
-        spanTitle = common.parseDOM(showHtml, "span", attrs = {'class' : 'showTitle'})
-        title = common.parseDOM(spanTitle[0], "a")
-        showTitle = common.replaceHTMLCodes(title[0].encode('utf8'))
-        url = common.parseDOM(spanTitle[0], "a", ret = 'href')
-        thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
-        url = url[0].replace('/Show/Details/', '/Show/_ShowEpisodes/')
-        showId = int(url.replace('/Show/_ShowEpisodes/', ''))
+        title = ''
+        showTitle = []
+        showUrl = []
+        thumbnail = []
+        if url == onlinePremierUrl:
+            title = common.parseDOM(showHtml, "img", ret = 'title')
+            showTitle = common.replaceHTMLCodes(title[0].encode('utf8'))
+            showUrl = common.parseDOM(showHtml, "a", ret = 'href')
+            thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
+        else:
+            spanTitle = common.parseDOM(showHtml, "span", attrs = {'class' : 'showTitle'})
+            title = common.parseDOM(spanTitle[0], "a")
+            showTitle = common.replaceHTMLCodes(title[0].encode('utf8'))
+            showUrl = common.parseDOM(spanTitle[0], "a", ret = 'href')
+            thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
+        showUrl = showUrl[0].replace('/Show/Details/', '/Show/_ShowEpisodes/')
+        showId = int(showUrl.replace('/Show/_ShowEpisodes/', ''))
         urlDocName = thumbnail[0][(thumbnail[0].rfind('/') + 1):]
         thumbnail = thumbnail[0].replace(urlDocName, urllib.quote(urlDocName))
         isSubscribed = False
@@ -110,12 +123,12 @@ def showShows(url):
         if listSubscribedFirst:
             if isSubscribed:
                 # add them now
-                addDir(showTitle, url, 3, thumbnail)
+                addDir(showTitle, showUrl, 3, thumbnail)
             else:
                 # will add them later
-                unsubscribedShows.append((showTitle, url, 3, thumbnail))
+                unsubscribedShows.append((showTitle, showUrl, 3, thumbnail))
         else:
-            addDir(showTitle, url, 3, thumbnail)
+            addDir(showTitle, showUrl, 3, thumbnail)
     # this will not be populated if we're not listing subscribed shows first
     for u in unsubscribedShows:
         addDir(u[0], u[1], u[2], u[3])
@@ -314,6 +327,7 @@ page=1
 thumbnail = ''
 cacheExpirySeconds = int(xbmcplugin.getSetting(thisPlugin,'cacheHours')) * 60 * 60
 isCacheEnabled = True if xbmcplugin.getSetting(thisPlugin,'isCacheEnabled') == 'true' else False
+onlinePremierUrl = '/Category/List/1962'
 
 
 try:
