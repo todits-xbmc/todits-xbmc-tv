@@ -1,3 +1,5 @@
+0.0.7
+    Fixed live stream not playing on some devices
 0.0.6
     Fixed wrong logo
 0.0.5
