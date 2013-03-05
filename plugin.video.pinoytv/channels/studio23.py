@@ -36,16 +36,7 @@ def play(id, userAgent):
     playPath = m.group(1)
     liz=xbmcgui.ListItem(brightCoveResponse['shortDescription'], iconImage = "DefaultVideo.png")
     liz.setInfo( type="Video", infoLabels = { "Title": brightCoveResponse['shortDescription'] } )
-    # liz.setProperty('IsLive', '1')
-    # liz.setProperty('App', 'live')
-    # liz.setProperty('PlayPath', playPath)
-    # liz.setProperty('SwfUrl', 'http://admin.brightcove.com/viewer/us20130222.1010/federatedVideoUI/BrightcovePlayer.swf?uid=1362467553994')
-    # liz.setProperty('TcUrl', brightCoveResponse['FLVFullLengthURL'])
-    # liz.setProperty('PageUrl', 'http://uaapsports.studio23.tv/livestream.html')
-    # liz.setProperty('FlashVer', 'WIN 11,1,102,63')
-    # xbmc.Player().play(brightCoveResponse['FLVFullLengthURL'], liz)
     videoUrl = brightCoveResponse['FLVFullLengthURL'] + ' live=1 app=live playPath=' + playPath
-    # + ' tcUrl=' + brightCoveResponse['FLVFullLengthURL']
     xbmc.Player().play(videoUrl, liz)
     
 def openUrl(path, params = {}, headers = []):
