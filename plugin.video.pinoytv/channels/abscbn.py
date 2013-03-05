@@ -139,13 +139,16 @@ def getLiveMenu(videoData, playPathPattern):
             pattern = re.compile(playPathPattern)
             m = pattern.search(video['FLVFullLengthURL'])
             playPath = m.group(1)
-            kwargs = { 'listProperty' : { 'IsLive' : '1', 'app' : 'live', 'PlayPath' : playPath, 'SwfUrl' : swfUrl } }
+            # kwargs = { 'listProperty' : { 'IsLive' : '1', 'app' : 'live', 'PlayPath' : playPath, 'SwfUrl' : swfUrl } }
+            videoUrl = video['FLVFullLengthURL'] + ' live=1 app=live playPath=' + playPath
+            kwargs = {}
         else:
             kwargs = { 'listProperty' : { 'IsLive' : '1', 'SwfUrl' : swfUrl} }
+            videoUrl = video['FLVFullLengthURL']
         menuItem = {
                         'id' : video['displayName'],
                         'name' : video['displayName'],
-                        'url' : video['FLVFullLengthURL'],
+                        'url' : videoUrl,
                         'icon' : '',
                         'isFolder' : False,
                         'kwargs' : kwargs
