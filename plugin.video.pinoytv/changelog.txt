@@ -1,3 +1,5 @@
+0.0.9
+    Fixed UAAP live streaming not working on some devices
 0.0.8
     Added new PBA streaming
     Fixed UAAP live streaming

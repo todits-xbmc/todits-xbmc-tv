@@ -9,7 +9,7 @@ def getMenu(menuId, userAgent):
                     'id' : 'uaaplive',
                     'name' : 'UAAP Live',
                     'url' : 'uaaplive',
-                    'icon' : 'http://uaapsports.studio23.tv/images/uaap_uaap-logo.png',
+                    'icon' : os.path.join(addonPath, 'uaap-logo.png'),
                     'isFolder' : True,
                     'kwargs' : {
                                     'play' : True
@@ -36,8 +36,7 @@ def play(id, userAgent):
     playPath = m.group(1)
     liz=xbmcgui.ListItem(brightCoveResponse['shortDescription'], iconImage = "DefaultVideo.png")
     liz.setInfo( type="Video", infoLabels = { "Title": brightCoveResponse['shortDescription'] } )
-    swfUrl = 'http://static-cdn1.ustream.tv/swf/live/viewer.rsl:405.swf'
-    videoUrl = brightCoveResponse['FLVFullLengthURL'] + ' live=1 app=live playPath=' + playPath + ' swfUrl=' + swfUrl
+    videoUrl = brightCoveResponse['FLVFullLengthURL'] + ' live=1 app=live playPath=' + playPath
     xbmc.Player().play(videoUrl, liz)
     
 def openUrl(path, params = {}, headers = []):
