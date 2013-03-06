@@ -2,6 +2,8 @@ import xbmc, xbmcaddon, os.path
 
 userAgent = 'Mozilla/5.0 (X11; Linux x86_64; rv:17.0) Gecko/20100101 Firefox/17.0'
 addonPath = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path'))
+resourcesPath = os.path.join(addonPath, 'resources')
+imagesPath = os.path.join(resourcesPath, 'images')
 
 def getMenu(menuId, userAgent):
     menu = {
@@ -9,14 +11,14 @@ def getMenu(menuId, userAgent):
                     'id' : 'pbalive',
                     'name' : 'PBA Live',
                     'url' : 'pbalive',
-                    'icon' : os.path.join(addonPath, 'pba_logo.jpg'),
+                    'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
                     'isFolder' : True
                 }],
         'pbalive' : [{
                         'id' : 'livestream1',
                         'name' : 'Play Stream 1',
                         'url' : 'rtmp://85.12.5.5/vl/_definst_',
-                        'icon' : os.path.join(addonPath, 'pba_logo.jpg'),
+                        'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
                         'isFolder' : False,
                         'kwargs' : {
                                         'listProperty' : {
@@ -32,7 +34,7 @@ def getMenu(menuId, userAgent):
                         'id' : 'livestream2',
                         'name' : 'Play Stream 2',
                         'url' : 'livestream2',
-                        'icon' : os.path.join(addonPath, 'pba_logo.jpg'),
+                        'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
                         'isFolder' : True,
                         'kwargs' : { 'play' : True }
                     }

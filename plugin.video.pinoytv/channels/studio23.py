@@ -2,6 +2,8 @@ import xbmc, xbmcaddon, os.path
 
 userAgent = 'Mozilla/5.0 (X11; Linux x86_64; rv:17.0) Gecko/20100101 Firefox/17.0'
 addonPath = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path'))
+resourcesPath = os.path.join(addonPath, 'resources')
+imagesPath = os.path.join(resourcesPath, 'images')
 baseUrl = 'http://uaapsports.studio23.tv'
 def getMenu(menuId, userAgent):
     menu = {
@@ -9,7 +11,7 @@ def getMenu(menuId, userAgent):
                     'id' : 'uaaplive',
                     'name' : 'UAAP Live',
                     'url' : 'uaaplive',
-                    'icon' : os.path.join(addonPath, 'uaap-logo.png'),
+                    'icon' : os.path.join(imagesPath, 'uaap-logo.png'),
                     'isFolder' : True,
                     'kwargs' : {
                                     'play' : True
@@ -24,13 +26,26 @@ def play(id, userAgent):
     common.plugin = xbmcaddon.Addon().getAddonInfo('name')
     htmlData = openUrl('/livestream.html')
     flashVars = common.parseDOM(htmlData, "embed", attrs = {'base' : 'http://admin.brightcove.com'}, ret = 'flashVars')
+    vars = None
     vars = urlparse.parse_qs(flashVars[0])
     from lib.brightcove import BrightCove
+    playerKey = ''
+    playerId = 0
+    videoPlayer = 0
+    if vars:
+        playerKey = vars['playerKey'][0]
+        playerId = int(vars['playerID'][0])
+        videoPlayer = int(vars['@videoPlayer'][0])
+    else:
+        # I hope these are fixed values.
+        playerKey = 'AQ~~,AAABtXvbPVE~,ZfNKKkFP3R-Khxw89mTKD3dSRwdPk_kt'
+        playerId = 2023948803001
+        videoPlayer = 2147444863001
     brightCoveServiceName = 'com.brightcove.player.runtime.PlayerMediaFacade'
     brightCoveserviceUrl = 'http://c.brightcove.com/services/messagebroker/amf'
-    brightCove = BrightCove('1f101e877a92705f79de79e69685bd57f931cede', vars['playerKey'][0], serviceUrl = brightCoveserviceUrl, serviceName = brightCoveServiceName)
+    brightCove = BrightCove('1f101e877a92705f79de79e69685bd57f931cede', playerKey, serviceUrl = brightCoveserviceUrl, serviceName = brightCoveServiceName)
     publisherId = 1878978674001
-    brightCoveResponse = brightCove.findMediaById(int(vars['playerID'][0]), int(vars['@videoPlayer'][0]), publisherId, userAgent)
+    brightCoveResponse = brightCove.findMediaById(playerId, videoPlayer, publisherId, userAgent)
     pattern = re.compile(r'/live/&(.+)')
     m = pattern.search(brightCoveResponse['FLVFullLengthURL'])
     playPath = m.group(1)

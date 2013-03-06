@@ -3,6 +3,8 @@ userAgent = 'Mozilla/5.0 (X11; Linux x86_64; rv:17.0) Gecko/20100101 Firefox/17.
 brightCoveserviceUrl = 'http://c.brightcove.com/services/messagebroker/amf'
 brightCoveServiceName = 'com.brightcove.experience.ExperienceRuntimeFacade'
 addonPath = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path'))
+resourcesPath = os.path.join(addonPath, 'resources')
+imagesPath = os.path.join(resourcesPath, 'images')
 
 def getMenu(menuId, userAgent = userAgent):
     
@@ -21,7 +23,7 @@ def getMenu(menuId, userAgent = userAgent):
                         'id' : 'abscbn',
                         'name' : 'ABS-CBN',
                         'url' : 'abscbn',
-                        'icon' : os.path.join(addonPath, 'abscbn_logo.jpg'),
+                        'icon' : os.path.join(imagesPath, 'abscbn_logo.jpg'),
                         'isFolder' : True
                     }
                 ],
@@ -30,21 +32,21 @@ def getMenu(menuId, userAgent = userAgent):
                             'id' : 'tvpatrol',
                             'name' : 'TV Patrol',
                             'url' : 'tvpatrol',
-                            'icon' : os.path.join(addonPath, 'tvpatrol_logo.jpg'),
+                            'icon' : os.path.join(imagesPath, 'tvpatrol_logo.jpg'),
                             'isFolder' : True
                         },
                         {
                             'id' : 'bandila',
                             'name' : 'Bandila',
                             'url' : 'bandila',
-                            'icon' : os.path.join(addonPath, 'bandila_logo.jpg'),
+                            'icon' : os.path.join(imagesPath, 'bandila_logo.jpg'),
                             'isFolder' : True
                         },
                         {
                             'id' : 'live',
                             'name' : 'Live',
                             'url' : 'rtmp://fms.ilive.to:1935/app/_definst_/xxooiinjva78v94',
-                            'icon' : os.path.join(addonPath, 'abscbn_logo.jpg'),
+                            'icon' : os.path.join(imagesPath, 'abscbn_logo.jpg'),
                             'isFolder' : False,
                             'kwargs' : { 'listProperty' : { 'SWFPlayer' : 'http://static.ilive.to/jwplayer/player.swf' } }
                         }
@@ -54,14 +56,14 @@ def getMenu(menuId, userAgent = userAgent):
                             'id' : 'tvpatrollive',
                             'name' : 'Live',
                             'url' : 'tvpatrollive',
-                            'icon' : os.path.join(addonPath, 'tvpatrol_logo.jpg'),
+                            'icon' : os.path.join(imagesPath, 'tvpatrol_logo.jpg'),
                             'isFolder' : True
                         },
                         {
                             'id' : 'tvpatrolreplay',
                             'name' : 'Replay',
                             'url' : 'tvpatrolreplay',
-                            'icon' : os.path.join(addonPath, 'tvpatrol_logo.jpg'),
+                            'icon' : os.path.join(imagesPath, 'tvpatrol_logo.jpg'),
                             'isFolder' : True
                         }
                     ],
@@ -70,7 +72,7 @@ def getMenu(menuId, userAgent = userAgent):
                             'id' : 'bandilareplay',
                             'name' : 'Replay',
                             'url' : 'bandilareplay',
-                            'icon' : os.path.join(addonPath, 'bandila_logo.jpg'),
+                            'icon' : os.path.join(imagesPath, 'bandila_logo.jpg'),
                             'isFolder' : True
                         }
                     ]
