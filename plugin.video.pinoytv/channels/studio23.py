@@ -36,7 +36,8 @@ def play(id, userAgent):
     playPath = m.group(1)
     liz=xbmcgui.ListItem(brightCoveResponse['shortDescription'], iconImage = "DefaultVideo.png")
     liz.setInfo( type="Video", infoLabels = { "Title": brightCoveResponse['shortDescription'] } )
-    videoUrl = brightCoveResponse['FLVFullLengthURL'] + ' live=1 app=live playPath=' + playPath
+    swfUrl = 'http://static-cdn1.ustream.tv/swf/live/viewer.rsl:405.swf'
+    videoUrl = brightCoveResponse['FLVFullLengthURL'] + ' live=1 app=live playPath=' + playPath + ' swfUrl=' + swfUrl
     xbmc.Player().play(videoUrl, liz)
     
 def openUrl(path, params = {}, headers = []):
