@@ -24,10 +24,15 @@ def play(id, userAgent):
     import CommonFunctions, urlparse, xbmcgui, re
     common = CommonFunctions
     common.plugin = xbmcaddon.Addon().getAddonInfo('name')
-    htmlData = openUrl('/livestream.html')
-    flashVars = common.parseDOM(htmlData, "embed", attrs = {'base' : 'http://admin.brightcove.com'}, ret = 'flashVars')
+    htmlData = None
+    flashVars = None
     vars = None
-    vars = urlparse.parse_qs(flashVars[0])
+    try:
+        htmlData = openUrl('/livestream.html')
+        flashVars = common.parseDOM(htmlData, "embed", attrs = {'base' : 'http://admin.brightcove.com'}, ret = 'flashVars')
+        vars = urlparse.parse_qs(flashVars[0])
+    except:
+        pass
     from lib.brightcove import BrightCove
     playerKey = ''
     playerId = 0
