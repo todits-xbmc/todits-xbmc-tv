@@ -1,3 +1,5 @@
+0.0.20
+    Fixed categories not grouping properly
 0.0.19
     Removed live channels (stream format is unsupported by XBMC)
     Fixed error when displaying the sports channel in subscribed shows

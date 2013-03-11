@@ -220,7 +220,7 @@ def getSubscribedShows():
     return showIds, subscribedShows
     
 def normalizeCategoryName(categoryName):
-    return categoryName.replace('LITE', '').replace('PREMIUM', '')
+    return categoryName.replace('LITE', '').replace('PREMIUM', '').strip()
     
 def showSubscribedCategories(url):
     subscribedShows = getSubscribedShows()[1]
