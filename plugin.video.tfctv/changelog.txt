@@ -1,3 +1,7 @@
+0.0.19
+    Removed live channels (stream format is unsupported by XBMC)
+    Fixed error when displaying the sports channel in subscribed shows
+    Grouped similar categories from different subscriptions
 0.0.18
     Fixed: "Online Premier Movies" not showing up
 0.0.17
