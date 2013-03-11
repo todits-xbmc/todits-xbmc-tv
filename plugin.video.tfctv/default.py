@@ -20,7 +20,7 @@ def showCategories():
         { 'name' : 'Entertainment', 'url' : '/Menu/BuildMenuGroup/Entertainment', 'mode' : 1 },
         { 'name' : 'News', 'url' : '/Menu/BuildMenuGroup/News', 'mode' : 1 },
         { 'name' : 'Movies', 'url' : '/Menu/BuildMenuGroup/Movies', 'mode' : 1 },
-        { 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
+        #{ 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
         { 'name' : 'Free TV', 'url' : '/Show/_ShowEpisodes/929', 'mode' : 3 }
     ]
     for c in categories:
@@ -64,7 +64,8 @@ def showSubCategories(url):
         subCatList = json.loads(jsonData)
         setToCache(url, subCatList)
     for s in subCatList:
-        addDir(s['name'], '/Category/List/%s' % s['id'], 2, 'menu_logo.png')
+        subCatName = s['name'].encode('utf8')
+        addDir(subCatName, '/Category/List/%s' % s['id'], 2, 'menu_logo.png')
     return True
         
 def showShows(url):
@@ -218,23 +219,28 @@ def getSubscribedShows():
                     showIds.append(p['ShowId'])
     return showIds, subscribedShows
     
+def normalizeCategoryName(categoryName):
+    return categoryName.replace('LITE', '').replace('PREMIUM', '')
+    
 def showSubscribedCategories(url):
     subscribedShows = getSubscribedShows()[1]
     categories = []
     for s in subscribedShows:
-        if s['MainCategory'] in categories:
+        categoryName = normalizeCategoryName(s['MainCategory'])
+        if categoryName in categories:
             pass
         else:
-            categories.append(s['MainCategory'])
-            addDir(s['MainCategory'], s['MainCategory'], 11, 'menu_logo.png')
+            categories.append(categoryName)
+            addDir(categoryName, categoryName, 11, 'menu_logo.png')
     return True
     
 def showSubscribedShows(url):
     subscribedShows = getSubscribedShows()[1]
     for s in subscribedShows:
-        if s['MainCategory'] == url:
+        categoryName = normalizeCategoryName(s['MainCategory'])
+        if categoryName == url:
             showTitle = common.replaceHTMLCodes(s['Show'].encode('utf8'))
-            addDir(s['Show'], '/Show/_ShowEpisodes/' + str(s['ShowId']), 3, 'menu_logo.png')
+            addDir(showTitle, '/Show/_ShowEpisodes/' + str(s['ShowId']), 3, 'menu_logo.png')
     return True
 
 def callServiceApi(path, params = {}, headers = []):
