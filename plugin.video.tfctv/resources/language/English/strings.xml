@@ -12,6 +12,7 @@
     <string id="50301">Cache expiration (Hours)</string>
     <string id="50302">Purge every (Days)</string>
     <string id="50303">Enable Caching</string>
+    <string id="50304">Clear cache on next plugin entry</string>
     <string id="50203">Login Retries</string>
     <string id="56000">Login Failed</string>
 </strings>

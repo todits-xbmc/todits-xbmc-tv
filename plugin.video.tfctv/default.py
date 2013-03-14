@@ -4,15 +4,19 @@ from lib.SimpleCache import SimpleCache
 
 import CommonFunctions
 common = CommonFunctions
-common.plugin = xbmcaddon.Addon().getAddonInfo('name')
+thisAddon = xbmcaddon.Addon()
+common.plugin = thisAddon.getAddonInfo('name')
 
 # common.dbg = True # Default
 # common.dbglevel = 3 # Default
 
 def showCategories():
     accountChanged = checkAccountChange()
-    if accountChanged:
+    clearCacheOnNextEntry = True if thisAddon.getSetting('clearCacheOnNextEntry') == 'true' else False
+    if accountChanged or clearCacheOnNextEntry:
         cleanCache(True)
+        if clearCacheOnNextEntry:
+            thisAddon.setSetting('clearCacheOnNextEntry', 'false')
     else:
         cleanCache(False)
     categories = [
@@ -25,7 +29,7 @@ def showCategories():
     ]
     for c in categories:
         addDir(c['name'], c['url'], c['mode'], 'icon.png')
-    return True
+    xbmcplugin.endOfDirectory(thisPlugin)
 
 def getFromCache(key):
     try:
@@ -48,7 +52,7 @@ def setToCache(key, value):
 def cleanCache(force = False):
     try:
         if isCacheEnabled:
-            purgeAfterSeconds = int(xbmcplugin.getSetting(thisPlugin,'purgeAfterDays')) * 24 * 60 * 60
+            purgeAfterSeconds = int(thisAddon.getSetting('purgeAfterDays')) * 24 * 60 * 60
             if force:
                 purgeAfterSeconds = 0
             return SimpleCache(cacheExpirySeconds).cleanCache(purgeAfterSeconds)
@@ -66,13 +70,13 @@ def showSubCategories(url):
     for s in subCatList:
         subCatName = s['name'].encode('utf8')
         addDir(subCatName, '/Category/List/%s' % s['id'], 2, 'menu_logo.png')
-    return True
+    xbmcplugin.endOfDirectory(thisPlugin)
         
 def showShows(url):
     htmlData = ''
     latestShowsHtml = []
     cacheKey = url + ':v1'
-    for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
+    for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
         latestShowsHtml = getFromCache(cacheKey)
         if latestShowsHtml == None or len(latestShowsHtml) == 0:
             htmlData = callServiceApi(url)
@@ -86,8 +90,8 @@ def showShows(url):
         latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'floatLeft'})
     else:
         latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
-    listSubscribedFirst = True if xbmcplugin.getSetting(thisPlugin,'listSubscribedFirst') == 'true' else False
-    italiciseUnsubscribed = True if xbmcplugin.getSetting(thisPlugin,'italiciseUnsubscribed') == 'true' else False
+    listSubscribedFirst = True if thisAddon.getSetting('listSubscribedFirst') == 'true' else False
+    italiciseUnsubscribed = True if thisAddon.getSetting('italiciseUnsubscribed') == 'true' else False
     subscribedShowIds = []
     if listSubscribedFirst or italiciseUnsubscribed: 
         # make an API call only if we're checking against subscribed shows
@@ -133,12 +137,12 @@ def showShows(url):
     # this will not be populated if we're not listing subscribed shows first
     for u in unsubscribedShows:
         addDir(u[0], u[1], u[2], u[3])
-    return True
+    xbmcplugin.endOfDirectory(thisPlugin)
         
 def showEpisodes(url):
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
         ('X-Requested-With', 'XMLHttpRequest')]
-    itemsPerPage = int(xbmcplugin.getSetting(thisPlugin,'itemsPerPage'))
+    itemsPerPage = int(thisAddon.getSetting('itemsPerPage'))
     params = { 'page' : page, 'size' : itemsPerPage }
     jsonData = callServiceApi(url, params, headers)
     episodeList = json.loads(jsonData)
@@ -147,15 +151,16 @@ def showEpisodes(url):
     if totalEpisodes > episodeCount:
         addDir("Next >>",  url, 3, thumbnail, page + 1)
     for e in episodeList['data']:
-        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, thumbnail)
-    return True
+        kwargs = { 'listProperties' : { 'IsPlayable' : 'true' } }
+        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, thumbnail, isFolder = False, **kwargs)
+    xbmcplugin.endOfDirectory(thisPlugin)
         
 def playEpisode(episodeId):
-    quality = int(xbmcplugin.getSetting(thisPlugin,'quality'))
+    quality = int(thisAddon.getSetting('quality'))
     errorCode = -1
     jsonData = ''
     episodeDetails = {}
-    for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
+    for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
         jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1))
         episodeDetails = json.loads(jsonData)
         errorCode = episodeDetails['errorCode']
@@ -164,10 +169,16 @@ def playEpisode(episodeId):
         else:
             login()
     if errorCode == 0:
-        liz=xbmcgui.ListItem(name, iconImage = "DefaultVideo.png", thumbnailImage = thumbnail)
-        liz.setInfo( type="Video", infoLabels = { "Title": name } )
+        from urlparse import urlparse
         url = episodeDetails['data']['Url']
-        xbmc.Player().play(url, liz)
+        urlParsed = urlparse(url)
+        url = '%s://%s%s?%s' % (urlParsed.scheme, urlParsed.netloc, urllib.quote(urlParsed.path), urlParsed.query)
+        liz=xbmcgui.ListItem(name, iconImage = "DefaultVideo.png", thumbnailImage = thumbnail, path = url)
+        liz.setInfo( type="Video", infoLabels = { "Title": name } )
+        liz.setProperty('IsPlayable', 'true')
+        return xbmcplugin.setResolvedUrl(thisPlugin, True, liz)
+        # url = episodeDetails['data']['Url']
+        # xbmc.Player().play(url, liz)
     else:
         dialog = xbmcgui.Dialog()
         dialog.ok("Could Not Play Item", "- This item is not part of your subscription", 
@@ -179,44 +190,57 @@ def getSubscribedShowIds():
     return getSubscribedShows()[0]
     
 def getSubscribedShows():
+    showIdsKey = 'showIds:v1'
+    subscribedShowsKey = 'subscribedShows:v1'
+    showIds = getFromCache(showIdsKey)
+    subscribedShows = getFromCache(subscribedShowsKey)
+    if showIds and subscribedShows:
+        return showIds, subscribedShows
     params = { 'page' : 1, 'size' : 1000 }
     headers = [('Content-type', 'application/x-www-form-urlencoded'),
         ('X-Requested-With', 'XMLHttpRequest')]
     jsonData = ''
     entitlementsData = {}
-    for i in range(int(xbmcplugin.getSetting(thisPlugin,'loginRetries')) + 1):
-        url = "/User/_Entitlements"
-        entitlementsData = getFromCache(url)
-        if entitlementsData == None:
-            jsonData = callServiceApi(url, params, headers)
-            entitlementsData = json.loads(jsonData)
-            setToCache(url, entitlementsData)
+    urlUserEntitlements = "/User/_Entitlements"
+    for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
+        jsonData = callServiceApi(urlUserEntitlements, params, headers)
+        entitlementsData = json.loads(jsonData)
         if entitlementsData['total'] != 0:
             break
         else:
             login()
     if entitlementsData['total'] > 1000:
-        params = { 'page' : 1, 'size' : entitlementsData['total'] }
-        jsonData = callServiceApi("/User/_Entitlements", params, headers)
-        entitlementsData = json.loads(jsonData)
-        setToCache("/User/_Entitlements", entitlementsData)
+        for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
+            params = { 'page' : 1, 'size' : entitlementsData['total'] }
+            jsonData = callServiceApi(urlUserEntitlements, params, headers)
+            entitlementsData = json.loads(jsonData)
+            if entitlementsData['total'] != 0:
+                break
+            else:
+                login()
     subscribedShows = []
     showIds = []
     for e in entitlementsData['data']:
         expiry = int(e['ExpiryDate'].replace('/Date(','').replace(')/', ''))
         if expiry >= (time.time() * 1000):
             url = "/Packages/GetShows?packageId=%s" % (e['PackageId'])
-            packagesData = getFromCache(url)
-            if packagesData == None:
+            packagesData = []
+            for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
                 jsonData = callServiceApi(url)
                 packagesData = json.loads(jsonData)
-                setToCache(url, packagesData)
+                if packagesData:
+                    break
+                else:
+                    login()
             for p in packagesData:
                 if p['ShowId'] in showIds:
                     pass
                 else:
                     subscribedShows.append(p)
                     showIds.append(p['ShowId'])
+    if showIds and subscribedShows:
+        setToCache(showIdsKey, showIds)
+        setToCache(subscribedShowsKey, subscribedShows)
     return showIds, subscribedShows
     
 def normalizeCategoryName(categoryName):
@@ -232,7 +256,7 @@ def showSubscribedCategories(url):
         else:
             categories.append(categoryName)
             addDir(categoryName, categoryName, 11, 'menu_logo.png')
-    return True
+    xbmcplugin.endOfDirectory(thisPlugin)
     
 def showSubscribedShows(url):
     subscribedShows = getSubscribedShows()[1]
@@ -241,7 +265,7 @@ def showSubscribedShows(url):
         if categoryName == url:
             showTitle = common.replaceHTMLCodes(s['Show'].encode('utf8'))
             addDir(showTitle, '/Show/_ShowEpisodes/' + str(s['ShowId']), 3, 'menu_logo.png')
-    return True
+    xbmcplugin.endOfDirectory(thisPlugin)
 
 def callServiceApi(path, params = {}, headers = []):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
@@ -256,15 +280,15 @@ def callServiceApi(path, params = {}, headers = []):
 
 def login():
     cookieJar.clear()
-    emailAddress = xbmcplugin.getSetting(thisPlugin,'emailAddress')
-    password = xbmcplugin.getSetting(thisPlugin,'password')
+    emailAddress = thisAddon.getSetting('emailAddress')
+    password = thisAddon.getSetting('password')
     formdata = { "EmailAddress" : emailAddress, "Password": password }
     jsonData = callServiceApi("/User/_Login", formdata)
     loginData = json.loads(jsonData)
     
 def checkAccountChange():
-    emailAddress = xbmcplugin.getSetting(thisPlugin,'emailAddress')
-    password = xbmcplugin.getSetting(thisPlugin,'password')
+    emailAddress = thisAddon.getSetting('emailAddress')
+    password = thisAddon.getSetting('password')
     hash = hashlib.sha1(emailAddress + password).hexdigest()
     hashFile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')), 'a.tmp')
     savedHash = ''
@@ -297,16 +321,15 @@ def getParams():
                             param[splitparams[0]]=splitparams[1]
     return param
 
-def addLink(name,url,title,iconimage):
-    liz=xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
-    liz.setInfo( type="Video", infoLabels={ "Title": title } )
-    return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=url,listitem=liz)
-
-def addDir(name, url, mode, thumbnail, page = 1):
+def addDir(name, url, mode, thumbnail, page = 1, isFolder = True, **kwargs):
     u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.quote_plus(name)+"&page="+str(page)+"&thumbnail="+urllib.quote_plus(thumbnail)
     liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=thumbnail)
     liz.setInfo( type="Video", infoLabels={ "Title": name } )
-    return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=True)
+    for k, v in kwargs.iteritems():
+        if k == 'listProperties':
+            for listPropertyKey, listPropertyValue in v.iteritems():
+                liz.setProperty(listPropertyKey, listPropertyValue)
+    return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=isFolder)
 
 
 thisPlugin = int(sys.argv[1])
@@ -331,8 +354,8 @@ name=None
 mode=None
 page=1
 thumbnail = ''
-cacheExpirySeconds = int(xbmcplugin.getSetting(thisPlugin,'cacheHours')) * 60 * 60
-isCacheEnabled = True if xbmcplugin.getSetting(thisPlugin,'isCacheEnabled') == 'true' else False
+cacheExpirySeconds = int(thisAddon.getSetting('cacheHours')) * 60 * 60
+isCacheEnabled = True if thisAddon.getSetting('isCacheEnabled') == 'true' else False
 onlinePremierUrl = '/Category/List/1962'
 
 
@@ -357,24 +380,20 @@ try:
 except:
     pass
     
-success = False
 if mode == None or url == None or len(url) < 1:
-    success = showCategories()
+    showCategories()
 elif mode == 1:
-    success = showSubCategories(url)
+    showSubCategories(url)
 elif mode == 2:
-    success = showShows(url)
+    showShows(url)
 elif mode == 3:
-    success = showEpisodes(url)
+    showEpisodes(url)
 elif mode == 4:
-    success = playEpisode(url)
+    playEpisode(url)
 elif mode == 10:
-    success = showSubscribedCategories(url)
+    showSubscribedCategories(url)
 elif mode == 11:
-    success = showSubscribedShows(url)
-
-if success == True:
-    xbmcplugin.endOfDirectory(thisPlugin)
+    showSubscribedShows(url)
 
 if cookieJarType == 'LWPCookieJar':
     cookieJar.save()

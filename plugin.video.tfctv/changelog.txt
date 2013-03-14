@@ -1,3 +1,7 @@
+0.0.21
+    Caching improvement
+    Added mechanism to clear cache
+    XBMC now marks watched episodes
 0.0.20
     Fixed categories not grouping properly
 0.0.19
