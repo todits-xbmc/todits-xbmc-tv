@@ -6,6 +6,7 @@ import CommonFunctions
 common = CommonFunctions
 thisAddon = xbmcaddon.Addon()
 common.plugin = thisAddon.getAddonInfo('name')
+cacheExpirySeconds = int(thisAddon.getSetting('cacheHours')) * 60 * 60
 
 # common.dbg = True # Default
 # common.dbglevel = 3 # Default
@@ -31,21 +32,21 @@ def showCategories():
         addDir(c['name'], c['url'], c['mode'], 'icon.png')
     xbmcplugin.endOfDirectory(thisPlugin)
 
-def getFromCache(key):
+def getFromCache(key, expirySeconds = cacheExpirySeconds):
     try:
         if isCacheEnabled:
             cacheKey = hashlib.sha1(key).hexdigest()
-            return SimpleCache(cacheExpirySeconds).get(cacheKey)
+            return SimpleCache(expirySeconds).get(cacheKey)
         else:
             return None
     except:
         return None
 
-def setToCache(key, value):
+def setToCache(key, value, expirySeconds = cacheExpirySeconds):
     try:
         if isCacheEnabled:
             cacheKey = hashlib.sha1(key).hexdigest()
-            SimpleCache(cacheExpirySeconds).set(cacheKey, value)
+            SimpleCache(expirySeconds).set(cacheKey, value)
     except:
         pass
 
@@ -260,12 +261,63 @@ def showSubscribedCategories(url):
     
 def showSubscribedShows(url):
     subscribedShows = getSubscribedShows()[1]
+    thumbnails = {}
+    showThumbnails = True if thisAddon.getSetting('showSubscribedShowsThumbnails') == 'true' else False
     for s in subscribedShows:
+        if showThumbnails:
+            if thumbnails:
+                pass
+            else:
+                try:
+                    thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'])
+                except:
+                    pass
         categoryName = normalizeCategoryName(s['MainCategory'])
         if categoryName == url:
+            thumbnail = ''
+            if showThumbnails:
+                if thumbnails.has_key(s['ShowId']):
+                    thumbnail = thumbnails[s['ShowId']]
+                else:
+                    try:
+                        thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'], forceRecache = True)
+                    except:
+                        pass
+                    if thumbnails.has_key(s['ShowId']):
+                        thumbnail = thumbnails[s['ShowId']]
             showTitle = common.replaceHTMLCodes(s['Show'].encode('utf8'))
-            addDir(showTitle, '/Show/_ShowEpisodes/' + str(s['ShowId']), 3, 'menu_logo.png')
+            addDir(showTitle, '/Show/_ShowEpisodes/' + str(s['ShowId']), 3, thumbnail)
     xbmcplugin.endOfDirectory(thisPlugin)
+
+def getSubscribedShowsThumbnails(mainCategoryId, forceRecache = False):
+    thumbnailKeyTemplate = 'getThumbnail:%s:v1'
+    thumbnailKey = thumbnailKeyTemplate  % mainCategoryId
+    tumbnailCacheExpirySeconds = int(thisAddon.getSetting('subscribedThumbnailCacheDays')) * 24 * 60 * 60
+    thumbnails = {}
+    if forceRecache:
+        thumbnails = None
+    else:
+        thumbnails = getFromCache(thumbnailKey, tumbnailCacheExpirySeconds)
+    if thumbnails != None:
+        return thumbnails
+    url = '/Category/List/%s' % mainCategoryId
+    htmlData = callServiceApi(url)
+    latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
+    latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
+    thumbnails = {}
+    for showHtml in latestShows:
+        spanTitle = common.parseDOM(showHtml, "span", attrs = {'class' : 'showTitle'})
+        showUrl = common.parseDOM(spanTitle[0], "a", ret = 'href')
+        latestShowId = int(showUrl[0].rsplit('/', 1)[1])
+        latestShowThumbnail = common.parseDOM(showHtml, "img", ret = 'src')
+        if latestShowThumbnail and len(latestShowThumbnail) > 0:
+            urlDocName = latestShowThumbnail[0][(latestShowThumbnail[0].rfind('/') + 1):]
+            latestShowThumbnailEncoded = latestShowThumbnail[0].replace(urlDocName, urllib.quote(urlDocName))
+            thumbnails[latestShowId] = latestShowThumbnailEncoded
+    if thumbnails and len(thumbnails) > 0:
+        setToCache(thumbnailKeyTemplate  % mainCategoryId, thumbnails, tumbnailCacheExpirySeconds)
+    return thumbnails
+            
 
 def callServiceApi(path, params = {}, headers = []):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
@@ -354,7 +406,6 @@ name=None
 mode=None
 page=1
 thumbnail = ''
-cacheExpirySeconds = int(thisAddon.getSetting('cacheHours')) * 60 * 60
 isCacheEnabled = True if thisAddon.getSetting('isCacheEnabled') == 'true' else False
 onlinePremierUrl = '/Category/List/1962'
 

@@ -10,10 +10,12 @@
         <setting id="itemsPerPage" type="labelenum" label="50101" default="10" values="10|20|30|40|50"/>
         <setting id="listSubscribedFirst" type="bool" label="50103" default="true"/>
         <setting id="italiciseUnsubscribed" type="bool" label="50104" default="true"/>
+        <setting id="showSubscribedShowsThumbnails" type="bool" label="50105" default="false"/>
     </category>
     <category label="50300">
         <setting id="isCacheEnabled" type="bool" label="50303" default="false"/>
-        <setting id="cacheHours" type="labelenum" label="50301" default="1" values="1|3|6|12|24"/>
+        <setting id="cacheHours" type="labelenum" label="50301" default="1" values="1|3|6|12|24|36|48"/>
+        <setting id="subscribedThumbnailCacheDays" type="labelenum" label="50305" default="30" values="15|30"/>
         <setting id="purgeAfterDays" type="labelenum" label="50302" default="15" values="1|7|15|30"/>
         <setting id="clearCacheOnNextEntry" type="bool" label="50304" default="false"/>
     </category>
