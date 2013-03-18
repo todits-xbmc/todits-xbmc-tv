@@ -263,11 +263,15 @@ def showSubscribedShows(url):
     subscribedShows = getSubscribedShows()[1]
     thumbnails = {}
     showThumbnails = True if thisAddon.getSetting('showSubscribedShowsThumbnails') == 'true' else False
+    isThumbnailFetched = False
     for s in subscribedShows:
         if showThumbnails:
-            if thumbnails:
+            # let's get the thumbnails once only
+            if isThumbnailFetched:
                 pass
             else:
+                isThumbnailFetched = True
+                thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'])
                 try:
                     thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'])
                 except:
@@ -279,6 +283,8 @@ def showSubscribedShows(url):
                 if thumbnails.has_key(s['ShowId']):
                     thumbnail = thumbnails[s['ShowId']]
                 else:
+                    # the show must be new and the thumbnail is probably not in cache ...
+                    # ... or the first set of thumbnails might be from a LITE subscription (less shows vs PREMIUM)
                     try:
                         thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'], forceRecache = True)
                     except:
@@ -290,7 +296,7 @@ def showSubscribedShows(url):
     xbmcplugin.endOfDirectory(thisPlugin)
 
 def getSubscribedShowsThumbnails(mainCategoryId, forceRecache = False):
-    thumbnailKeyTemplate = 'getThumbnail:%s:v1'
+    thumbnailKeyTemplate = 'getThumbnail:%s:v2'
     thumbnailKey = thumbnailKeyTemplate  % mainCategoryId
     tumbnailCacheExpirySeconds = int(thisAddon.getSetting('subscribedThumbnailCacheDays')) * 24 * 60 * 60
     thumbnails = {}
@@ -312,7 +318,7 @@ def getSubscribedShowsThumbnails(mainCategoryId, forceRecache = False):
         latestShowThumbnail = common.parseDOM(showHtml, "img", ret = 'src')
         if latestShowThumbnail and len(latestShowThumbnail) > 0:
             urlDocName = latestShowThumbnail[0][(latestShowThumbnail[0].rfind('/') + 1):]
-            latestShowThumbnailEncoded = latestShowThumbnail[0].replace(urlDocName, urllib.quote(urlDocName))
+            latestShowThumbnailEncoded = latestShowThumbnail[0].replace(urlDocName, urllib.quote(common.replaceHTMLCodes(urlDocName)))
             thumbnails[latestShowId] = latestShowThumbnailEncoded
     if thumbnails and len(thumbnails) > 0:
         setToCache(thumbnailKeyTemplate  % mainCategoryId, thumbnails, tumbnailCacheExpirySeconds)
