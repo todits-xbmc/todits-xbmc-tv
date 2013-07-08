@@ -1,3 +1,6 @@
+0.0.24
+    Display "Next" at the end of the list
+    Better Error notification
 0.0.23
     Fixed some thumbnails not showing up
 0.0.22
