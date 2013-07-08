@@ -86,7 +86,7 @@ def showShows(url):
         if len(latestShowsHtml) > 0:
             break
         else:
-            login()
+            loginData = login()
     if url == onlinePremierUrl:
         latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'floatLeft'})
     else:
@@ -147,13 +147,13 @@ def showEpisodes(url):
     params = { 'page' : page, 'size' : itemsPerPage }
     jsonData = callServiceApi(url, params, headers)
     episodeList = json.loads(jsonData)
+    for e in episodeList['data']:
+        kwargs = { 'listProperties' : { 'IsPlayable' : 'true' } }
+        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, thumbnail, isFolder = False, **kwargs)
     totalEpisodes = int(episodeList['total'])
     episodeCount = page * itemsPerPage
     if totalEpisodes > episodeCount:
         addDir("Next >>",  url, 3, thumbnail, page + 1)
-    for e in episodeList['data']:
-        kwargs = { 'listProperties' : { 'IsPlayable' : 'true' } }
-        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, thumbnail, isFolder = False, **kwargs)
     xbmcplugin.endOfDirectory(thisPlugin)
         
 def playEpisode(episodeId):
@@ -161,14 +161,30 @@ def playEpisode(episodeId):
     errorCode = -1
     jsonData = ''
     episodeDetails = {}
+    notificationCall = ''
+    hasError = False
     for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
         jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1))
         episodeDetails = json.loads(jsonData)
+        if type(episodeDetails) is dict and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0:
+            errorHeader = 'Media Error'
+            errorMessage = 'Subscription is already expired or the item is not part of your subscription.'
+            #if episodeDetails.has_key('errorMessage'):
+            #    errorMessage = episodeDetails['errorMessage']
+            notificationCall = 'Notification(%s, %s)' % (errorHeader, errorMessage)
+            hasError = True
         errorCode = episodeDetails['errorCode']
         if errorCode == 0:
             break
         else:
-            login()
+            loginData = login()
+            if type(loginData) is dict and loginData.has_key('errorCode') and loginData['errorCode'] != 0:
+                errorHeader = 'Login Error'
+                errorMessage = 'Could not login'
+                if loginData.has_key('errorMessage'):
+                    errorMessage = loginData['errorMessage']
+                notificationCall = 'Notification(%s, %s)' % (errorHeader, errorMessage)
+                hasError = True
     if errorCode == 0:
         from urlparse import urlparse
         url = episodeDetails['data']['Url']
@@ -181,9 +197,12 @@ def playEpisode(episodeId):
         # url = episodeDetails['data']['Url']
         # xbmc.Player().play(url, liz)
     else:
-        dialog = xbmcgui.Dialog()
-        dialog.ok("Could Not Play Item", "- This item is not part of your subscription", 
-"- Or your subscription is already expired", "- Or your email and/or password is incorrect")
+        if hasError:
+            xbmc.executebuiltin(notificationCall)
+    # else:
+    #     dialog = xbmcgui.Dialog()
+    #     dialog.ok("Could Not Play Item", "- This item is not part of your subscription", 
+# "- Or your subscription is already expired", "- Or your email and/or password is incorrect")
     return False
 
         
@@ -209,7 +228,7 @@ def getSubscribedShows():
         if entitlementsData['total'] != 0:
             break
         else:
-            login()
+            loginData = login()
     if entitlementsData['total'] > 1000:
         for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
             params = { 'page' : 1, 'size' : entitlementsData['total'] }
@@ -343,6 +362,7 @@ def login():
     formdata = { "EmailAddress" : emailAddress, "Password": password }
     jsonData = callServiceApi("/User/_Login", formdata)
     loginData = json.loads(jsonData)
+    return loginData
     
 def checkAccountChange():
     emailAddress = thisAddon.getSetting('emailAddress')
