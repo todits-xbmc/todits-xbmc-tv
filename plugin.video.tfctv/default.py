@@ -26,7 +26,8 @@ def showCategories():
         { 'name' : 'News', 'url' : '/Menu/BuildMenuGroup/News', 'mode' : 1 },
         { 'name' : 'Movies', 'url' : '/Menu/BuildMenuGroup/Movies', 'mode' : 1 },
         #{ 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
-        { 'name' : 'Free TV', 'url' : '/Show/_ShowEpisodes/929', 'mode' : 3 }
+        { 'name' : 'Free TV', 'url' : '/Show/_ShowEpisodes/929', 'mode' : 3 },
+        { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 }
     ]
     for c in categories:
         addDir(c['name'], c['url'], c['mode'], 'icon.png')
@@ -216,28 +217,8 @@ def getSubscribedShows():
     subscribedShows = getFromCache(subscribedShowsKey)
     if showIds and subscribedShows:
         return showIds, subscribedShows
-    params = { 'page' : 1, 'size' : 1000 }
-    headers = [('Content-type', 'application/x-www-form-urlencoded'),
-        ('X-Requested-With', 'XMLHttpRequest')]
     jsonData = ''
-    entitlementsData = {}
-    urlUserEntitlements = "/User/_Entitlements"
-    for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
-        jsonData = callServiceApi(urlUserEntitlements, params, headers)
-        entitlementsData = json.loads(jsonData)
-        if entitlementsData['total'] != 0:
-            break
-        else:
-            loginData = login()
-    if entitlementsData['total'] > 1000:
-        for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
-            params = { 'page' : 1, 'size' : entitlementsData['total'] }
-            jsonData = callServiceApi(urlUserEntitlements, params, headers)
-            entitlementsData = json.loads(jsonData)
-            if entitlementsData['total'] != 0:
-                break
-            else:
-                login()
+    entitlementsData = getEntitlementsData()
     subscribedShows = []
     showIds = []
     for e in entitlementsData['data']:
@@ -342,7 +323,43 @@ def getSubscribedShowsThumbnails(mainCategoryId, forceRecache = False):
     if thumbnails and len(thumbnails) > 0:
         setToCache(thumbnailKeyTemplate  % mainCategoryId, thumbnails, tumbnailCacheExpirySeconds)
     return thumbnails
-            
+    
+def getEntitlementsData():
+    entitlementsData = {}
+    params = { 'page' : 1, 'size' : 1000 }
+    headers = [('Content-type', 'application/x-www-form-urlencoded'),
+        ('X-Requested-With', 'XMLHttpRequest')]
+    jsonData = ''
+    urlUserEntitlements = "/User/_Entitlements"
+    for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
+        jsonData = callServiceApi(urlUserEntitlements, params, headers)
+        entitlementsData = json.loads(jsonData)
+        if entitlementsData['total'] != 0:
+            break
+        else:
+            loginData = login()
+    if entitlementsData['total'] > 1000:
+        for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
+            params = { 'page' : 1, 'size' : entitlementsData['total'] }
+            jsonData = callServiceApi(urlUserEntitlements, params, headers)
+            entitlementsData = json.loads(jsonData)
+            if entitlementsData['total'] != 0:
+                break
+            else:
+                login()
+    return entitlementsData
+
+def showSubcriptionInformation():
+    xbmc.executebuiltin("ActivateWindow(%d)" % (10147, ))
+    win = xbmcgui.Window(10147)
+    entitlementsData = getEntitlementsData()
+    message = ''
+    for entitlement in entitlementsData['data']:
+        expiryUnixTime = (int(entitlement['ExpiryDate'].replace('/Date(','').replace(')/', ''))) / 1000
+        entitlementEntry = 'Package Name: %s\n    EID: %s\n    Expiry Date: %s\n\n' % (entitlement['Content'], entitlement['EntitlementId'], time.strftime('%B %d, %Y %X %Z', time.localtime(expiryUnixTime)))
+        message += entitlementEntry
+    win.getControl(1).setLabel('TFC.tv Subscription Information')
+    win.getControl(5).setText(message)
 
 def callServiceApi(path, params = {}, headers = []):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
@@ -471,6 +488,8 @@ elif mode == 10:
     showSubscribedCategories(url)
 elif mode == 11:
     showSubscribedShows(url)
+elif mode == 12:
+    showSubcriptionInformation()
 
 if cookieJarType == 'LWPCookieJar':
     cookieJar.save()
