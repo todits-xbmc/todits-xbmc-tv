@@ -13,6 +13,14 @@ def getMenu(menuId, userAgent):
                     'url' : 'pbalive',
                     'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
                     'isFolder' : True
+                },
+                {
+                    'id' : 'ncaalive',
+                    'name' : 'NCAA Live',
+                    'url' : 'http://edge.pldt.swiftserve.com/live/mediascape/amlst:aksyon/playlist.m3u8',
+                    'icon' : 'http://season89.ncaa.org.ph/wp-content/uploads/2013/02/logo1-1.png',
+                    'isFolder' : False,
+                    'kwargs' : { 'play' : True }
                 }],
         'pbalive' : [{
                         'id' : 'livestream1',
@@ -36,6 +44,14 @@ def getMenu(menuId, userAgent):
                         'url' : 'livestream2',
                         'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
                         'isFolder' : True,
+                        'kwargs' : { 'play' : True }
+                    },
+                    {
+                        'id' : 'pbalivestream3',
+                        'name' : 'Play Stream 3',
+                        'url' : 'http://edge.pldt.swiftserve.com/live/mediascape/amlst:aksyon/playlist.m3u8',
+                        'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
+                        'isFolder' : False,
                         'kwargs' : { 'play' : True }
                     }
                 ]
