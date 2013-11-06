@@ -1,3 +1,7 @@
+0.0.26
+    New and better way of getting the list of episodes. (Most recent episodes show up faster)
+    Fix for subscribed shows thumbnails issue
+    Plot outline for skins that support it
 0.0.25
     Display Subscription Information
 0.0.24

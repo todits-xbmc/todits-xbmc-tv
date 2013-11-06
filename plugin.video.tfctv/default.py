@@ -26,7 +26,7 @@ def showCategories():
         { 'name' : 'News', 'url' : '/Menu/BuildMenuGroup/News', 'mode' : 1 },
         { 'name' : 'Movies', 'url' : '/Menu/BuildMenuGroup/Movies', 'mode' : 1 },
         #{ 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
-        { 'name' : 'Free TV', 'url' : '/Show/_ShowEpisodes/929', 'mode' : 3 },
+        { 'name' : 'Free TV', 'url' : '929', 'mode' : 3 },
         { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 }
     ]
     for c in categories:
@@ -116,8 +116,7 @@ def showShows(url):
             showTitle = common.replaceHTMLCodes(title[0].encode('utf8'))
             showUrl = common.parseDOM(spanTitle[0], "a", ret = 'href')
             thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
-        showUrl = showUrl[0].replace('/Show/Details/', '/Show/_ShowEpisodes/')
-        showId = int(showUrl.replace('/Show/_ShowEpisodes/', ''))
+        showId = int(showUrl[0].replace('/Show/Details/', ''))
         urlDocName = thumbnail[0][(thumbnail[0].rfind('/') + 1):]
         thumbnail = thumbnail[0].replace(urlDocName, urllib.quote(urlDocName))
         isSubscribed = False
@@ -130,31 +129,32 @@ def showShows(url):
         if listSubscribedFirst:
             if isSubscribed:
                 # add them now
-                addDir(showTitle, showUrl, 3, thumbnail)
+                addDir(showTitle, str(showId), 3, thumbnail)
             else:
                 # will add them later
-                unsubscribedShows.append((showTitle, showUrl, 3, thumbnail))
+                unsubscribedShows.append((showTitle, str(showId), 3, thumbnail))
         else:
-            addDir(showTitle, showUrl, 3, thumbnail)
+            addDir(showTitle, str(showId), 3, thumbnail)
     # this will not be populated if we're not listing subscribed shows first
     for u in unsubscribedShows:
         addDir(u[0], u[1], u[2], u[3])
     xbmcplugin.endOfDirectory(thisPlugin)
         
-def showEpisodes(url):
-    headers = [('Content-type', 'application/x-www-form-urlencoded'),
-        ('X-Requested-With', 'XMLHttpRequest')]
+def showEpisodes(showId):
+    url = '/Show/GetListOfEpisodes/%s' % showId
     itemsPerPage = int(thisAddon.getSetting('itemsPerPage'))
-    params = { 'page' : page, 'size' : itemsPerPage }
-    jsonData = callServiceApi(url, params, headers)
+    params = { 'page' : page, 'pageSize' : itemsPerPage }
+    jsonData = callServiceApi(url, params)
     episodeList = json.loads(jsonData)
-    for e in episodeList['data']:
+    for e in episodeList['Data']:
         kwargs = { 'listProperties' : { 'IsPlayable' : 'true' } }
-        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, thumbnail, isFolder = False, **kwargs)
-    totalEpisodes = int(episodeList['total'])
+        if 'Synopsis' in e:
+            kwargs['listInfos'] = { 'video' : { 'plotoutline' : e['Synopsis'] } } 
+        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, e['ImgUrl'], isFolder = False, **kwargs)
+    totalEpisodes = int(episodeList['Total'])
     episodeCount = page * itemsPerPage
     if totalEpisodes > episodeCount:
-        addDir("Next >>",  url, 3, thumbnail, page + 1)
+        addDir("Next >>",  showId, 3, '', page + 1)
     xbmcplugin.endOfDirectory(thisPlugin)
         
 def playEpisode(episodeId):
@@ -263,21 +263,10 @@ def showSubscribedShows(url):
     subscribedShows = getSubscribedShows()[1]
     thumbnails = {}
     showThumbnails = True if thisAddon.getSetting('showSubscribedShowsThumbnails') == 'true' else False
-    isThumbnailFetched = False
     for s in subscribedShows:
-        if showThumbnails:
-            # let's get the thumbnails once only
-            if isThumbnailFetched:
-                pass
-            else:
-                isThumbnailFetched = True
-                thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'])
-                try:
-                    thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'])
-                except:
-                    pass
         categoryName = normalizeCategoryName(s['MainCategory'])
         if categoryName == url:
+            thumbnails = thumbnails if thumbnails else getSubscribedShowsThumbnails(s['MainCategoryId'])
             thumbnail = ''
             if showThumbnails:
                 if thumbnails.has_key(s['ShowId']):
@@ -292,7 +281,7 @@ def showSubscribedShows(url):
                     if thumbnails.has_key(s['ShowId']):
                         thumbnail = thumbnails[s['ShowId']]
             showTitle = common.replaceHTMLCodes(s['Show'].encode('utf8'))
-            addDir(showTitle, '/Show/_ShowEpisodes/' + str(s['ShowId']), 3, thumbnail)
+            addDir(showTitle, str(s['ShowId']), 3, thumbnail)
     xbmcplugin.endOfDirectory(thisPlugin)
 
 def getSubscribedShowsThumbnails(mainCategoryId, forceRecache = False):
@@ -424,6 +413,9 @@ def addDir(name, url, mode, thumbnail, page = 1, isFolder = True, **kwargs):
         if k == 'listProperties':
             for listPropertyKey, listPropertyValue in v.iteritems():
                 liz.setProperty(listPropertyKey, listPropertyValue)
+        if k == 'listInfos':
+            for listInfoKey, listInfoValue in v.iteritems():
+                liz.setInfo(listInfoKey, listInfoValue)
     return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=isFolder)
 
 
