@@ -71,37 +71,63 @@ def showSubCategories(url):
         setToCache(url, subCatList)
     for s in subCatList:
         subCatName = s['name'].encode('utf8')
-        addDir(subCatName, '/Category/List/%s' % s['id'], 2, 'menu_logo.png')
+        addDir(subCatName, '%s' % s['id'], 2, 'menu_logo.png')
     xbmcplugin.endOfDirectory(thisPlugin)
         
-def showShows(url):
-    htmlData = ''
-    latestShowsHtml = []
-    cacheKey = url + ':v1'
-    for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
-        latestShowsHtml = getFromCache(cacheKey)
-        if latestShowsHtml == None or len(latestShowsHtml) == 0:
-            htmlData = callServiceApi(url)
-            latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
-            setToCache(cacheKey, latestShowsHtml)
-        if len(latestShowsHtml) > 0:
-            break
-        else:
-            loginData = login()
-    if url == onlinePremierUrl:
-        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'floatLeft'})
-    else:
-        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
+def showShows(categoryId):
+    showListData = getShowListData(categoryId)
+    if showListData is None:
+        xbmcplugin.endOfDirectory(thisPlugin)
+        return
     listSubscribedFirst = True if thisAddon.getSetting('listSubscribedFirst') == 'true' else False
     italiciseUnsubscribed = True if thisAddon.getSetting('italiciseUnsubscribed') == 'true' else False
     subscribedShowIds = []
     if listSubscribedFirst or italiciseUnsubscribed: 
         # make an API call only if we're checking against subscribed shows
         subscribedShowIds = getSubscribedShowIds()
-    unsubscribedShows = []
-    subscribedShows = []
+    if listSubscribedFirst:
+        unsubscribedShows = []
+        # try to minimize loops
+        for showId, (showName, thumbnail) in showListData.iteritems():
+            if showId in subscribedShowIds:
+                addDir(showName, str(showId), 3, thumbnail)
+            else:
+                showTitle = '[I]' + showName + '[/I]' if italiciseUnsubscribed else showName
+                # well add these unsubscribed shows later
+                unsubscribedShows.append((showId, showTitle, thumbnail))
+        for showId, showTitle, thumbnail in unsubscribedShows:
+            addDir(showTitle, str(showId), 3, thumbnail)
+    else:
+        for showId, (showName, thumbnail) in showListData.iteritems():
+            showTitle = '[I]' + showName + '[/I]' if italiciseUnsubscribed and showId in subscribedShowIds else showName
+            addDir(showTitle, str(showId), 3, thumbnail)
+    xbmcplugin.endOfDirectory(thisPlugin)
+    
+def getShowListData(categoryId, forceRecache = False):
+    url = '/Category/List/%s' % categoryId
+    cacheKey = 'showListData:v2:%s' % categoryId
+    showListData = None
+    if forceRecache:
+        showListData = None
+    else:
+        showListData = getFromCache(cacheKey)
+    if showListData:
+        return showListData
+    else:
+        htmlData = callServiceApi(url)
+        showListData = extractShowListData(htmlData, url)
+        setToCache(cacheKey, showListData)
+        return showListData
+        
+def extractShowListData(htmlData, url):
+    showListData = {}
+    latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
+    if url == onlinePremierUrl:
+        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'floatLeft'})
+    else:
+        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
     for showHtml in latestShows:
-        title = ''
+        title = []
         showTitle = []
         showUrl = []
         thumbnail = []
@@ -119,26 +145,8 @@ def showShows(url):
         showId = int(showUrl[0].replace('/Show/Details/', ''))
         urlDocName = thumbnail[0][(thumbnail[0].rfind('/') + 1):]
         thumbnail = thumbnail[0].replace(urlDocName, urllib.quote(urlDocName))
-        isSubscribed = False
-        if showId in subscribedShowIds:
-            isSubscribed = True
-        else:
-            isSubscribed = False
-            if italiciseUnsubscribed:
-                showTitle = '[I]' + showTitle + '[/I]'
-        if listSubscribedFirst:
-            if isSubscribed:
-                # add them now
-                addDir(showTitle, str(showId), 3, thumbnail)
-            else:
-                # will add them later
-                unsubscribedShows.append((showTitle, str(showId), 3, thumbnail))
-        else:
-            addDir(showTitle, str(showId), 3, thumbnail)
-    # this will not be populated if we're not listing subscribed shows first
-    for u in unsubscribedShows:
-        addDir(u[0], u[1], u[2], u[3])
-    xbmcplugin.endOfDirectory(thisPlugin)
+        showListData[showId] = (showTitle, thumbnail)
+    return showListData
         
 def showEpisodes(showId):
     url = '/Show/GetListOfEpisodes/%s' % showId
@@ -261,57 +269,34 @@ def showSubscribedCategories(url):
     
 def showSubscribedShows(url):
     subscribedShows = getSubscribedShows()[1]
+    shows = [s for s in subscribedShows if s['MainCategory'].startswith(url)]
     thumbnails = {}
     showThumbnails = True if thisAddon.getSetting('showSubscribedShowsThumbnails') == 'true' else False
-    for s in subscribedShows:
-        categoryName = normalizeCategoryName(s['MainCategory'])
-        if categoryName == url:
-            thumbnails = thumbnails if thumbnails else getSubscribedShowsThumbnails(s['MainCategoryId'])
-            thumbnail = ''
-            if showThumbnails:
-                if thumbnails.has_key(s['ShowId']):
-                    thumbnail = thumbnails[s['ShowId']]
-                else:
-                    # the show must be new and the thumbnail is probably not in cache ...
-                    # ... or the first set of thumbnails might be from a LITE subscription (less shows vs PREMIUM)
-                    try:
-                        thumbnails = getSubscribedShowsThumbnails(s['MainCategoryId'], forceRecache = True)
-                    except:
-                        pass
-                    if thumbnails.has_key(s['ShowId']):
-                        thumbnail = thumbnails[s['ShowId']]
-            showTitle = common.replaceHTMLCodes(s['Show'].encode('utf8'))
-            addDir(showTitle, str(s['ShowId']), 3, thumbnail)
+    showListData = {}
+    for s in shows:
+        thumbnail = ''
+        showId = s['ShowId']
+        if showThumbnails:
+            categoryId = s['MainCategoryId']
+            # get the showListData only once. don't get it if it's already set
+            try:
+                showListData = showListData if showListData else getShowListData(categoryId, forceRecache = True)
+            except:
+                pass
+            if showId in showListData:
+                thumbnail = showListData[showId][1]
+            else:
+                # the show must be new and the thumbnail is probably not in cache ...
+                # ... or the first set of thumbnails might be from a LITE subscription (less shows vs PREMIUM)
+                try:
+                    showListData = getShowListData(categoryId, forceRecache = True)
+                except:
+                    pass
+                if showId in showListData:
+                    thumbnail = showListData[showId][1]
+        showTitle = common.replaceHTMLCodes(s['Show'].encode('utf8'))
+        addDir(showTitle, str(showId), 3, thumbnail)
     xbmcplugin.endOfDirectory(thisPlugin)
-
-def getSubscribedShowsThumbnails(mainCategoryId, forceRecache = False):
-    thumbnailKeyTemplate = 'getThumbnail:%s:v2'
-    thumbnailKey = thumbnailKeyTemplate  % mainCategoryId
-    tumbnailCacheExpirySeconds = int(thisAddon.getSetting('subscribedThumbnailCacheDays')) * 24 * 60 * 60
-    thumbnails = {}
-    if forceRecache:
-        thumbnails = None
-    else:
-        thumbnails = getFromCache(thumbnailKey, tumbnailCacheExpirySeconds)
-    if thumbnails != None:
-        return thumbnails
-    url = '/Category/List/%s' % mainCategoryId
-    htmlData = callServiceApi(url)
-    latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
-    latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
-    thumbnails = {}
-    for showHtml in latestShows:
-        spanTitle = common.parseDOM(showHtml, "span", attrs = {'class' : 'showTitle'})
-        showUrl = common.parseDOM(spanTitle[0], "a", ret = 'href')
-        latestShowId = int(showUrl[0].rsplit('/', 1)[1])
-        latestShowThumbnail = common.parseDOM(showHtml, "img", ret = 'src')
-        if latestShowThumbnail and len(latestShowThumbnail) > 0:
-            urlDocName = latestShowThumbnail[0][(latestShowThumbnail[0].rfind('/') + 1):]
-            latestShowThumbnailEncoded = latestShowThumbnail[0].replace(urlDocName, urllib.quote(common.replaceHTMLCodes(urlDocName)))
-            thumbnails[latestShowId] = latestShowThumbnailEncoded
-    if thumbnails and len(thumbnails) > 0:
-        setToCache(thumbnailKeyTemplate  % mainCategoryId, thumbnails, tumbnailCacheExpirySeconds)
-    return thumbnails
     
 def getEntitlementsData():
     entitlementsData = {}
