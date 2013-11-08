@@ -405,7 +405,7 @@ def addDir(name, url, mode, thumbnail, page = 1, isFolder = True, **kwargs):
 
 
 thisPlugin = int(sys.argv[1])
-userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0'
+userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.48 Safari/537.36'
 baseUrl = 'http://tfc.tv'
 cookieJar = cookielib.CookieJar()
 cookieFile = ''
