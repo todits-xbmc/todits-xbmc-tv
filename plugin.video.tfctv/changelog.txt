@@ -1,3 +1,6 @@
+0.0.27
+    Improvement
+    Thumbnails for subscribed shows now follow the cache expiration instead of having it's own
 0.0.26
     New and better way of getting the list of episodes. (Most recent episodes show up faster)
     Fix for subscribed shows thumbnails issue
