@@ -157,7 +157,7 @@ def showEpisodes(showId):
     for e in episodeList['Data']:
         kwargs = { 'listProperties' : { 'IsPlayable' : 'true' } }
         if 'Synopsis' in e:
-            kwargs['listInfos'] = { 'video' : { 'plotoutline' : e['Synopsis'] } } 
+            kwargs['listInfos'] = { 'video' : { 'plot' : e['Synopsis'] } } 
         addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, e['ImgUrl'], isFolder = False, **kwargs)
     totalEpisodes = int(episodeList['Total'])
     episodeCount = page * itemsPerPage
