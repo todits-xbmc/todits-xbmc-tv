@@ -21,45 +21,74 @@ def getMenu(menuId, userAgent):
                     'icon' : 'http://season89.ncaa.org.ph/wp-content/uploads/2013/02/logo1-1.png',
                     'isFolder' : False,
                     'kwargs' : { 'play' : True }
-                }],
-        'pbalive' : [{
-                        'id' : 'livestream1',
+                }
+                # ,
+                # {
+                    # 'id' : 'btv',
+                    # 'name' : 'BTV Live',
+                    # 'url' : 'http://omni.live-s.cdn.bitgravity.com/cdn-live/_definst_/omni/live/balltv_multirate.smil/Manifest',
+                    # 'icon' : 'http://season89.ncaa.org.ph/wp-content/uploads/2013/02/logo1-1.png',
+                    # 'isFolder' : False,
+                    # 'kwargs' : { 'play' : True }
+                # }
+                ],
+        'pbalive' : [
+                    {
+                        'id' : 'pbalivestream1',
                         'name' : 'Play Stream 1',
-                        'url' : 'rtmp://85.12.5.5/vl/_definst_',
+                        'url' : 'http://stream3.news5.ph:1935/live/aksyon.stream/playlist.m3u8',
                         'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
                         'isFolder' : False,
-                        'kwargs' : {
-                                        'listProperty' : {
-                                                            'app' : 'vl/_definst_', 
-                                                            'PlayPath' : 'sportspbalive', 
-                                                            'SWFPlayer' : 'http://www.veemi.com/player/player-licensed.swf', 
-                                                            'PageURL' : 'http://www.veemi.com', 
-                                                            'TcUrl' : 'rtmp://85.12.5.5/vl/_definst_'
-                                                        }
-                                    }
+                        'kwargs' : { 'play' : True }
                     },
                     {
-                        'id' : 'livestream2',
+                        'id' : 'pbalivestream2',
                         'name' : 'Play Stream 2',
                         'url' : 'livestream2',
                         'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
                         'isFolder' : True,
                         'kwargs' : { 'play' : True }
-                    },
-                    {
-                        'id' : 'pbalivestream3',
-                        'name' : 'Play Stream 3',
-                        'url' : 'http://edge.pldt.swiftserve.com/live/mediascape/amlst:aksyon/playlist.m3u8',
-                        'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
-                        'isFolder' : False,
-                        'kwargs' : { 'play' : True }
                     }
+                    # ,
+                    # {
+                        # 'id' : 'pbalivestream3',
+                        # 'name' : 'Play Stream 3',
+                        # 'url' : 'rtmp://85.12.5.5/vl/_definst_',
+                        # 'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
+                        # 'isFolder' : False,
+                        # 'kwargs' : {
+                                        # 'listProperty' : {
+                                                            # 'app' : 'vl/_definst_', 
+                                                            # 'PlayPath' : 'sportspbalive', 
+                                                            # 'SWFPlayer' : 'http://www.veemi.com/player/player-licensed.swf', 
+                                                            # 'PageURL' : 'http://www.veemi.com', 
+                                                            # 'TcUrl' : 'rtmp://85.12.5.5/vl/_definst_'
+                                                        # }
+                                    # }
+                    # },
+                    # {
+                        # 'id' : 'pbalivestream4',
+                        # 'name' : 'Play Stream 3',
+                        # 'url' : 'http://edge.pldt.swiftserve.com/live/mediascape/amlst:aksyon/playlist.m3u8',
+                        # 'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
+                        # 'isFolder' : False,
+                        # 'kwargs' : { 'play' : True }
+                    # },
+                    # {
+                        # 'id' : 'pbalivestream5',
+                        # 'name' : 'Play Stream 4',
+                        # 'url' : 'http://edge.pldt.swiftserve.com/live/mediascape/amlst:tv5/playlist.m3u8',
+                        # 'icon' : os.path.join(imagesPath, 'pba_logo.jpg'),
+                        # 'isFolder' : False,
+                        # 'kwargs' : { 'play' : True }
+                    # }
                 ]
+                
     }
     return (__name__, menu[menuId])
     
 def play(id, userAgent):
-    if id == 'livestream2':
+    if id == 'pbalivestream2':
         import xbmc, xbmcgui
         channelId = '11283017'
         amfUrl = 'http://cdngw.ustream.tv/Viewer/getStream/1/%s.amf' % channelId
