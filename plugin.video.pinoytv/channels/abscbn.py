@@ -96,8 +96,7 @@ def getTvPatrolReplayMenu(userAgent = userAgent):
     playerKey = 'AQ~~,AAABtXvbPVE~,ZfNKKkFP3R8lv_FZU4AZv5yZg6d3YSFW'
     playerId = 1933244636001
     brightCove = BrightCove(serviceKey, playerKey, serviceUrl = brightCoveserviceUrl, serviceName = brightCoveServiceName)
-    # brightCoveResponse = brightCove.getBrightCoveData(playerId, userAgent)
-    brightCoveResponse = brightCove.getBrightCoveData(playerId, userAgent, **{'proxy': '127.0.0.1:8888'})
+    brightCoveResponse = brightCove.getBrightCoveData(playerId, userAgent)
     videoData = brightCoveResponse['playlistTabs']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']
     return getOndemandMenu(videoData, r'/ondemand/&(mp4:.+\.mp4)\?')
     
