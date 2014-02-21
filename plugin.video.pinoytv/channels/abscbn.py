@@ -96,7 +96,8 @@ def getTvPatrolReplayMenu(userAgent = userAgent):
     playerKey = 'AQ~~,AAABtXvbPVE~,ZfNKKkFP3R8lv_FZU4AZv5yZg6d3YSFW'
     playerId = 1933244636001
     brightCove = BrightCove(serviceKey, playerKey, serviceUrl = brightCoveserviceUrl, serviceName = brightCoveServiceName)
-    brightCoveResponse = brightCove.getBrightCoveData(playerId, userAgent)
+    # brightCoveResponse = brightCove.getBrightCoveData(playerId, userAgent)
+    brightCoveResponse = brightCove.getBrightCoveData(playerId, userAgent, **{'proxy': '127.0.0.1:8888'})
     videoData = brightCoveResponse['playlistTabs']['lineupListDTO']['playlistDTOs'][0]['videoDTOs']
     return getOndemandMenu(videoData, r'/ondemand/&(mp4:.+\.mp4)\?')
     
@@ -115,17 +116,20 @@ def getOndemandMenu(videoData, playPathPattern):
     menu = []
     for video in videoData:
         streamUrl = video['FLVFullLengthURL']
-        pattern = re.compile(playPathPattern)
-        m = pattern.search(streamUrl)
-        playPath = m.group(1)
-        streamUrl = streamUrl.replace('/ondemand/&mp4', '/ondemand/mp4')
+        iosRenditions = dict([(u['encodingRate'], u['defaultURL']) for u in video['IOSRenditions']])
+        streamUrl = iosRenditions[max(iosRenditions.keys())]
+        # print streamUrl
+        # pattern = re.compile(playPathPattern)
+        # m = pattern.search(streamUrl)
+        # playPath = m.group(1)
+        # streamUrl = streamUrl.replace('/ondemand/&mp4', '/ondemand/mp4')
         menuItem = {
                         'id' : video['displayName'],
                         'name' : video['displayName'],
                         'url' : streamUrl,
                         'icon' : video['thumbnailURL'],
                         'isFolder' : False,
-                        'kwargs' : { 'listProperty' : { 'app' : 'ondemand', 'PlayPath' : playPath } }
+                        # 'kwargs' : { 'listProperty' : { 'app' : 'ondemand', 'PlayPath' : playPath } }
                     }
         menu.append(menuItem)
     return menu
@@ -134,10 +138,10 @@ def getLiveMenu(videoData, playPathPattern):
     import re
     menu = []
     for video in videoData:
-        print video
+        # print video
         swfUrl = 'http://admin.brightcove.com/viewer/us20130222.1010/federatedVideoUI/BrightcovePlayer.swf?uid=1362392439318'
         if video['FLVFullLengthStreamed']:
-            print video['displayName'], playPathPattern, video['FLVFullLengthURL']
+            # print video['displayName'], playPathPattern, video['FLVFullLengthURL']
             pattern = re.compile(playPathPattern)
             m = pattern.search(video['FLVFullLengthURL'])
             playPath = m.group(1)
