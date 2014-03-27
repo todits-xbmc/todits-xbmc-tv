@@ -22,9 +22,9 @@ def showCategories():
         cleanCache(False)
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
-        { 'name' : 'Entertainment', 'url' : '/Menu/BuildMenuGroup/Entertainment', 'mode' : 1 },
-        { 'name' : 'News', 'url' : '/Menu/BuildMenuGroup/News', 'mode' : 1 },
-        { 'name' : 'Movies', 'url' : '/Menu/BuildMenuGroup/Movies', 'mode' : 1 },
+        { 'name' : 'Entertainment', 'url' : 'Entertainment', 'mode' : 1 },
+        { 'name' : 'News', 'url' : 'News', 'mode' : 1 },
+        { 'name' : 'Movies', 'url' : 'Movies', 'mode' : 1 },
         #{ 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
         { 'name' : 'Free TV', 'url' : '929', 'mode' : 3 },
         { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 }
@@ -63,12 +63,25 @@ def cleanCache(force = False):
     except:
         return None
 
+def extractSubCategory(subCategory, htmlContents):
+    invisibleMenuTree = common.parseDOM(htmlContents, "div", attrs = {'id' : 'invisibleMenuTree'})
+    subCategoryHtml = common.parseDOM(invisibleMenuTree[0], "li", attrs = {'rel' : subCategory})
+    genreHtml = common.parseDOM(subCategoryHtml[0], "li", attrs = {'class' : 'liGenre'})
+    subCategories = []
+    for genre in genreHtml:
+        name = common.replaceHTMLCodes(common.stripTags(genre).splitlines()[0])
+        categoryId = common.parseDOM(genre, "a", attrs = {'class' : 'more'}, ret = 'href')[0].replace('/Category/List/','')
+        subCategories.append({'name' : name, 'id' : categoryId})
+    return subCategories
+        
 def showSubCategories(url):
-    subCatList = getFromCache(url)
+    cacheKey = 'subcategory:%s:v1' % url
+    subCatList = getFromCache(cacheKey)
     if subCatList == None:
-        jsonData = callServiceApi(url)
-        subCatList = json.loads(jsonData)
-        setToCache(url, subCatList)
+        htmlContents = callServiceApi('/')
+        # subCatList = json.loads(jsonData)
+        subCatList = extractSubCategory(url, htmlContents)
+        setToCache(cacheKey, subCatList)
     for s in subCatList:
         subCatName = s['name'].encode('utf8')
         addDir(subCatName, '%s' % s['id'], 2, 'menu_logo.png')
