@@ -245,21 +245,29 @@ def getSubscribedShows():
     for e in entitlementsData['data']:
         expiry = int(e['ExpiryDate'].replace('/Date(','').replace(')/', ''))
         if expiry >= (time.time() * 1000):
-            url = "/Packages/GetShows?packageId=%s" % (e['PackageId'])
-            packagesData = []
-            for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
-                jsonData = callServiceApi(url)
-                packagesData = json.loads(jsonData)
-                if packagesData:
-                    break
-                else:
-                    login()
-            for p in packagesData:
-                if p['ShowId'] in showIds:
-                    pass
-                else:
-                    subscribedShows.append(p)
-                    showIds.append(p['ShowId'])
+            if e['PackageId']:
+                url = "/Packages/GetShows?packageId=%s" % (e['PackageId'])
+                packagesData = []
+                for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
+                    jsonData = callServiceApi(url)
+                    packagesData = json.loads(jsonData)
+                    if packagesData:
+                        break
+                    else:
+                        login()
+                for p in packagesData:
+                    if p['ShowId'] in showIds:
+                        pass
+                    else:
+                        subscribedShows.append(p)
+                        showIds.append(p['ShowId'])
+            else:
+                if e['CategoryId'] and e['CategoryId'] not in showIds:
+                    e['MainCategory'] = u'A la carte'
+                    e['ShowId'] = e['CategoryId']
+                    e['Show'] = e['Content']
+                    subscribedShows.append(e)
+                    showIds.append(e['CategoryId'])
     if showIds and subscribedShows:
         setToCache(showIdsKey, showIds)
         setToCache(subscribedShowsKey, subscribedShows)
@@ -289,7 +297,7 @@ def showSubscribedShows(url):
     for s in shows:
         thumbnail = ''
         showId = s['ShowId']
-        if showThumbnails:
+        if showThumbnails and 'MainCategoryId' in s:
             categoryId = s['MainCategoryId']
             # get the showListData only once. don't get it if it's already set
             try:
