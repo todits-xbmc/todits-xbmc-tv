@@ -185,8 +185,9 @@ def playEpisode(episodeId):
     episodeDetails = {}
     notificationCall = ''
     hasError = False
+    headers = [('X-Requested-With', 'XMLHttpRequest')]
     for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
-        jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1))
+        jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1), headers = headers)
         episodeDetails = json.loads(jsonData)
         if type(episodeDetails) is dict and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0:
             errorHeader = 'Media Error'
