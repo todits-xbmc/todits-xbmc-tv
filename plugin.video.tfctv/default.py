@@ -22,9 +22,9 @@ def showCategories():
         cleanCache(False)
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
-        { 'name' : 'Entertainment', 'url' : 'Entertainment', 'mode' : 1 },
-        { 'name' : 'News', 'url' : 'News', 'mode' : 1 },
-        { 'name' : 'Movies', 'url' : 'Movies', 'mode' : 1 },
+        #{ 'name' : 'Entertainment', 'url' : 'Entertainment', 'mode' : 1 },
+        #{ 'name' : 'News', 'url' : 'News', 'mode' : 1 },
+        #{ 'name' : 'Movies', 'url' : 'Movies', 'mode' : 1 },
         #{ 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
         { 'name' : 'Free TV', 'url' : '929', 'mode' : 3 },
         { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 }
@@ -294,6 +294,7 @@ def showSubscribedShows(url):
     shows = [s for s in subscribedShows if s['MainCategory'].startswith(url)]
     thumbnails = {}
     showThumbnails = True if thisAddon.getSetting('showSubscribedShowsThumbnails') == 'true' else False
+    showThumbnails = False # currently broken, disabled for now
     showListData = {}
     for s in shows:
         thumbnail = ''
@@ -425,6 +426,14 @@ def addDir(name, url, mode, thumbnail, page = 1, isFolder = True, **kwargs):
                 liz.setInfo(listInfoKey, listInfoValue)
     return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=isFolder)
 
+def showAnnouncement(message):
+    if not messages:
+        return
+    xbmc.executebuiltin("ActivateWindow(%d)" % (10147, ))
+    win = xbmcgui.Window(10147)
+    xbmc.sleep(100)
+    win.getControl(1).setLabel(xbmcaddon.Addon().getLocalizedString(50701))
+    win.getControl(5).setText(message)
 
 thisPlugin = int(sys.argv[1])
 userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.48 Safari/537.36'
@@ -492,3 +501,11 @@ elif mode == 12:
 
 if cookieJarType == 'LWPCookieJar':
     cookieJar.save()
+
+if thisAddon.getSetting('announcement') != thisAddon.getAddonInfo('version'):
+    messages = {
+        '0.0.33': 'Please access your shows via "Subscribed Shows". Thumbnails are currently disabled.'
+        }
+    if thisAddon.getAddonInfo('version') in messages:
+        showAnnouncement(messages[thisAddon.getAddonInfo('version')])
+        xbmcaddon.Addon().setSetting('announcement', thisAddon.getAddonInfo('version'))
