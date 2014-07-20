@@ -22,10 +22,10 @@ def showCategories():
         cleanCache(False)
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
-        #{ 'name' : 'Entertainment', 'url' : 'Entertainment', 'mode' : 1 },
-        #{ 'name' : 'News', 'url' : 'News', 'mode' : 1 },
-        #{ 'name' : 'Movies', 'url' : 'Movies', 'mode' : 1 },
-        #{ 'name' : 'Live', 'url' : '/Menu/BuildMenuGroup/Live', 'mode' : 1 },
+        { 'name' : 'Shows', 'url' : 'Shows', 'mode' : 1 },
+        { 'name' : 'News', 'url' : 'News', 'mode' : 1 },
+        { 'name' : 'Movies', 'url' : 'Movies', 'mode' : 1 },
+        # { 'name' : 'Live', 'url' : 'Live', 'mode' : 1 },
         { 'name' : 'Free TV', 'url' : '929', 'mode' : 3 },
         { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 }
     ]
@@ -64,14 +64,15 @@ def cleanCache(force = False):
         return None
 
 def extractSubCategory(subCategory, htmlContents):
-    invisibleMenuTree = common.parseDOM(htmlContents, "div", attrs = {'id' : 'invisibleMenuTree'})
-    subCategoryHtml = common.parseDOM(invisibleMenuTree[0], "li", attrs = {'rel' : subCategory})
-    genreHtml = common.parseDOM(subCategoryHtml[0], "li", attrs = {'class' : 'liGenre'})
+    invisibleMenuTree = common.parseDOM(htmlContents, "ul", attrs = {'id' : 'main_menu'})
+    subCategoryHtml = common.parseDOM(invisibleMenuTree[0], "li")
     subCategories = []
-    for genre in genreHtml:
-        name = common.replaceHTMLCodes(common.stripTags(genre).splitlines()[0])
-        categoryId = common.parseDOM(genre, "a", attrs = {'class' : 'more'}, ret = 'href')[0].replace('/Category/List/','')
-        subCategories.append({'name' : name, 'id' : categoryId})
+    for s in subCategoryHtml:
+        subCategoryContents = common.parseDOM(s, "a")
+        if subCategoryContents and subCategoryContents[0].strip().upper() == subCategory.upper():
+            for c in common.parseDOM(s, "li"):
+                 subCategories.append({'name' : common.replaceHTMLCodes(common.parseDOM(c, "a")[0]), 'url' : common.parseDOM(c, "a", ret = 'href')[0]})
+            break
     return subCategories
         
 def showSubCategories(url):
@@ -79,12 +80,11 @@ def showSubCategories(url):
     subCatList = getFromCache(cacheKey)
     if subCatList == None:
         htmlContents = callServiceApi('/')
-        # subCatList = json.loads(jsonData)
         subCatList = extractSubCategory(url, htmlContents)
         setToCache(cacheKey, subCatList)
     for s in subCatList:
         subCatName = s['name'].encode('utf8')
-        addDir(subCatName, '%s' % s['id'], 2, 'menu_logo.png')
+        addDir(subCatName, '%s' % s['url'], 2, 'menu_logo.png')
     xbmcplugin.endOfDirectory(thisPlugin)
         
 def showShows(categoryId):
@@ -106,7 +106,7 @@ def showShows(categoryId):
                 addDir(showName, str(showId), 3, thumbnail)
             else:
                 showTitle = '[I]' + showName + '[/I]' if italiciseUnsubscribed else showName
-                # well add these unsubscribed shows later
+                # we'll add these unsubscribed shows later
                 unsubscribedShows.append((showId, showTitle, thumbnail))
         for showId, showTitle, thumbnail in unsubscribedShows:
             addDir(showTitle, str(showId), 3, thumbnail)
@@ -117,8 +117,10 @@ def showShows(categoryId):
     xbmcplugin.endOfDirectory(thisPlugin)
     
 def getShowListData(categoryId, forceRecache = False):
-    url = '/Category/List/%s' % categoryId
-    cacheKey = 'showListData:v2:%s' % categoryId
+    url = categoryId
+    if not url.startswith('/Category/List/'):
+        url = '/Category/List/%s' % categoryId
+    cacheKey = 'showListData:v3:%s' % categoryId
     showListData = None
     if forceRecache:
         showListData = None
@@ -134,31 +136,15 @@ def getShowListData(categoryId, forceRecache = False):
         
 def extractShowListData(htmlData, url):
     showListData = {}
-    latestShowsHtml = common.parseDOM(htmlData, "div", attrs = {'id' : 'latestShows_bodyContainer'})
-    if url == onlinePremierUrl:
-        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'floatLeft'})
-    else:
-        latestShows = common.parseDOM(latestShowsHtml[0], "div", attrs = {'class' : 'showItem_preview ht_265'})
-    for showHtml in latestShows:
-        title = []
-        showTitle = []
-        showUrl = []
-        thumbnail = []
-        if url == onlinePremierUrl:
-            title = common.parseDOM(showHtml, "img", ret = 'title')
-            showTitle = common.replaceHTMLCodes(title[0].encode('utf8'))
-            showUrl = common.parseDOM(showHtml, "a", ret = 'href')
-            thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
-        else:
-            spanTitle = common.parseDOM(showHtml, "span", attrs = {'class' : 'showTitle'})
-            title = common.parseDOM(spanTitle[0], "a")
-            showTitle = common.replaceHTMLCodes(title[0].encode('utf8'))
-            showUrl = common.parseDOM(spanTitle[0], "a", ret = 'href')
-            thumbnail = common.parseDOM(showHtml, "img", ret = 'src')
-        showId = int(showUrl[0].replace('/Show/Details/', ''))
+    showsHtml = common.parseDOM(htmlData, "div", attrs = {'class' : 'movie col-md-2 col-sm-3 col-xs-6 no_title'})
+    for s in showsHtml:
+        thumbnail = common.parseDOM(s, "img", ret = 'src')
+        titleElement = common.parseDOM(s, "h2")
+        showUrl = common.parseDOM(titleElement, "a", ret = 'href')
+        title = common.parseDOM(titleElement, "a")
         urlDocName = thumbnail[0][(thumbnail[0].rfind('/') + 1):]
         thumbnail = thumbnail[0].replace(urlDocName, urllib.quote(urlDocName))
-        showListData[showId] = (showTitle, thumbnail)
+        showListData[int(showUrl[0].replace('/Show/Details/', '').split('/')[0])] = (common.replaceHTMLCodes(title[0].encode('utf8')), thumbnail)
     return showListData
         
 def showEpisodes(showId):
@@ -192,8 +178,6 @@ def playEpisode(episodeId):
         if type(episodeDetails) is dict and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0:
             errorHeader = 'Media Error'
             errorMessage = 'Subscription is already expired or the item is not part of your subscription.'
-            #if episodeDetails.has_key('errorMessage'):
-            #    errorMessage = episodeDetails['errorMessage']
             notificationCall = 'Notification(%s, %s)' % (errorHeader, errorMessage)
             hasError = True
         errorCode = episodeDetails['errorCode']
@@ -217,15 +201,9 @@ def playEpisode(episodeId):
         liz.setInfo( type="Video", infoLabels = { "Title": name } )
         liz.setProperty('IsPlayable', 'true')
         return xbmcplugin.setResolvedUrl(thisPlugin, True, liz)
-        # url = episodeDetails['data']['Url']
-        # xbmc.Player().play(url, liz)
     else:
         if hasError:
             xbmc.executebuiltin(notificationCall)
-    # else:
-    #     dialog = xbmcgui.Dialog()
-    #     dialog.ok("Could Not Play Item", "- This item is not part of your subscription", 
-# "- Or your subscription is already expired", "- Or your email and/or password is incorrect")
     return False
 
         
@@ -347,16 +325,13 @@ def getEntitlementsData():
     return entitlementsData
 
 def showSubcriptionInformation():
-    xbmc.executebuiltin("ActivateWindow(%d)" % (10147, ))
-    win = xbmcgui.Window(10147)
     entitlementsData = getEntitlementsData()
     message = ''
     for entitlement in entitlementsData['data']:
         expiryUnixTime = (int(entitlement['ExpiryDate'].replace('/Date(','').replace(')/', ''))) / 1000
         entitlementEntry = 'Package Name: %s\n    EID: %s\n    Expiry Date: %s\n\n' % (entitlement['Content'], entitlement['EntitlementId'], time.strftime('%B %d, %Y %X %Z', time.localtime(expiryUnixTime)))
         message += entitlementEntry
-    win.getControl(1).setLabel('TFC.tv Subscription Information')
-    win.getControl(5).setText(message)
+    showMessage(message, xbmcaddon.Addon().getLocalizedString(56001))
 
 def callServiceApi(path, params = {}, headers = []):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
@@ -426,13 +401,13 @@ def addDir(name, url, mode, thumbnail, page = 1, isFolder = True, **kwargs):
                 liz.setInfo(listInfoKey, listInfoValue)
     return xbmcplugin.addDirectoryItem(handle=thisPlugin,url=u,listitem=liz,isFolder=isFolder)
 
-def showAnnouncement(message):
-    if not messages:
+def showMessage(message, title = xbmcaddon.Addon().getLocalizedString(50107)):
+    if not message:
         return
     xbmc.executebuiltin("ActivateWindow(%d)" % (10147, ))
     win = xbmcgui.Window(10147)
     xbmc.sleep(100)
-    win.getControl(1).setLabel(xbmcaddon.Addon().getLocalizedString(50701))
+    win.getControl(1).setLabel(title)
     win.getControl(5).setText(message)
 
 thisPlugin = int(sys.argv[1])
@@ -504,8 +479,8 @@ if cookieJarType == 'LWPCookieJar':
 
 if thisAddon.getSetting('announcement') != thisAddon.getAddonInfo('version'):
     messages = {
-        '0.0.33': 'Please access your shows via "Subscribed Shows". Thumbnails are currently disabled.'
+        '0.0.34': 'Hello there! Your TFC.tv plugin has been updated.\n\nTFC.tv has undergone a lot of changes and the plugin needs to be updated to adjust to those changes. The plugin should work just as before except for the "Show subscribed shows thumbnails" which is currently disabled. The previously named "Entertainment" category has been changed to "Shows" just as how TFC.tv refers to it now.\n\nIf you encounter anything that you think is a bug, please report it to the TFC.tv XBMC Forum thread (http://forum.xbmc.org/showthread.php?tid=155870) or to the plugin website (https://code.google.com/p/todits-xbmc/).'
         }
     if thisAddon.getAddonInfo('version') in messages:
-        showAnnouncement(messages[thisAddon.getAddonInfo('version')])
+        showMessage(messages[thisAddon.getAddonInfo('version')], xbmcaddon.Addon().getLocalizedString(50106))
         xbmcaddon.Addon().setSetting('announcement', thisAddon.getAddonInfo('version'))
