@@ -173,7 +173,8 @@ def playEpisode(episodeId):
     hasError = False
     headers = [('X-Requested-With', 'XMLHttpRequest')]
     for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
-        jsonData = callServiceApi('/Ajax/GetMedia/%s?p=%s' % (int(episodeId), quality + 1), headers = headers)
+        playLink = getEpisodePlayLink(episodeId, quality + 1)
+        jsonData = callServiceApi(playLink, headers = headers)
         episodeDetails = json.loads(jsonData)
         if type(episodeDetails) is dict and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0:
             errorHeader = 'Media Error'
@@ -206,6 +207,10 @@ def playEpisode(episodeId):
             xbmc.executebuiltin(notificationCall)
     return False
 
+def getEpisodePlayLink(episodeId, dataMode):
+    episodeDetails = callServiceApi('/Episode/Details/%s' % episodeId)
+    playLink = common.parseDOM(episodeDetails, "a", attrs = {'class' : 'playmode', 'data-mode' : '%s' % dataMode}, ret = 'data-href')
+    return playLink[0]
         
 def getSubscribedShowIds():
     return getSubscribedShows()[0]
