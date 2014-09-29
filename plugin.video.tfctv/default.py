@@ -13,10 +13,10 @@ def showCategories():
     accountChanged = checkAccountChange()
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
-        { 'name' : 'Shows', 'url' : 'Shows', 'mode' : 1 },
-        { 'name' : 'News', 'url' : 'News', 'mode' : 1 },
-        { 'name' : 'Movies', 'url' : 'Movies', 'mode' : 1 },
-        # { 'name' : 'Live', 'url' : 'Live', 'mode' : 1 },
+        { 'name' : 'Shows', 'url' : '/Category/Shows', 'mode' : 1 },
+        { 'name' : 'News', 'url' : '/Category/News', 'mode' : 1 },
+        { 'name' : 'Movies', 'url' : '/Category/Movies', 'mode' : 1 },
+        # { 'name' : 'Live', 'url' : '/Category/Live', 'mode' : 1 },
         { 'name' : 'Free TV', 'url' : '929', 'mode' : 3 },
         { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 }
     ]
@@ -24,24 +24,24 @@ def showCategories():
         addDir(c['name'], c['url'], c['mode'], 'icon.png')
     xbmcplugin.endOfDirectory(thisPlugin)
 
-def extractSubCategory(subCategory, htmlContents):
-    invisibleMenuTree = common.parseDOM(htmlContents, "ul", attrs = {'id' : 'main_menu'})
-    subCategoryHtml = common.parseDOM(invisibleMenuTree[0], "li")
+def extractSubCategory(htmlContents):
+    sectionHeaders = common.parseDOM(htmlContents, "div", attrs = {'class' : 'sec_header'})
     subCategories = []
-    for s in subCategoryHtml:
-        subCategoryContents = common.parseDOM(s, "a")
-        if subCategoryContents and subCategoryContents[0].strip().upper() == subCategory.upper():
-            for c in common.parseDOM(s, "li"):
-                 subCategories.append({'name' : common.replaceHTMLCodes(common.parseDOM(c, "a")[0]), 'url' : common.parseDOM(c, "a", ret = 'href')[0]})
-            break
+    for s in sectionHeaders:
+        titleRaw = common.parseDOM(s, "h2", attrs = {'class' : 'section_title clearfix'})
+        title = common.replaceHTMLCodes(titleRaw[0]) if len(titleRaw) > 0 else ''
+        urlRaw = common.parseDOM(s, "a", ret = 'href')
+        url = urlRaw[0] if len(urlRaw) > 0 else ''
+        if title and url:
+            subCategories.append((title, url))
     return subCategories
         
 def showSubCategories(url):
-    htmlContents = callServiceApi('/')
-    subCatList = extractSubCategory(url, htmlContents)
+    print url
+    htmlContents = callServiceApi(url)
+    subCatList = extractSubCategory(htmlContents)
     for s in subCatList:
-        subCatName = s['name'].encode('utf8')
-        addDir(subCatName, '%s' % s['url'], 2, 'menu_logo.png')
+        addDir(s[0].encode('utf8'), '%s' % s[1], 2, 'menu_logo.png')
     xbmcplugin.endOfDirectory(thisPlugin)
         
 def showShows(categoryId):
