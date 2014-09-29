@@ -1,25 +1,16 @@
 import sys, urllib, urllib2, json, cookielib, time, os.path, hashlib
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
-from lib.SimpleCache import SimpleCache
 
 import CommonFunctions
 common = CommonFunctions
 thisAddon = xbmcaddon.Addon()
 common.plugin = thisAddon.getAddonInfo('name')
-cacheExpirySeconds = int(thisAddon.getSetting('cacheHours')) * 60 * 60
 
 # common.dbg = True # Default
 # common.dbglevel = 3 # Default
 
 def showCategories():
     accountChanged = checkAccountChange()
-    clearCacheOnNextEntry = True if thisAddon.getSetting('clearCacheOnNextEntry') == 'true' else False
-    if accountChanged or clearCacheOnNextEntry:
-        cleanCache(True)
-        if clearCacheOnNextEntry:
-            thisAddon.setSetting('clearCacheOnNextEntry', 'false')
-    else:
-        cleanCache(False)
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
         { 'name' : 'Shows', 'url' : 'Shows', 'mode' : 1 },
@@ -32,36 +23,6 @@ def showCategories():
     for c in categories:
         addDir(c['name'], c['url'], c['mode'], 'icon.png')
     xbmcplugin.endOfDirectory(thisPlugin)
-
-def getFromCache(key, expirySeconds = cacheExpirySeconds):
-    try:
-        if isCacheEnabled:
-            cacheKey = hashlib.sha1(key).hexdigest()
-            return SimpleCache(expirySeconds).get(cacheKey)
-        else:
-            return None
-    except:
-        return None
-
-def setToCache(key, value, expirySeconds = cacheExpirySeconds):
-    try:
-        if isCacheEnabled:
-            cacheKey = hashlib.sha1(key).hexdigest()
-            SimpleCache(expirySeconds).set(cacheKey, value)
-    except:
-        pass
-
-def cleanCache(force = False):
-    try:
-        if isCacheEnabled:
-            purgeAfterSeconds = int(thisAddon.getSetting('purgeAfterDays')) * 24 * 60 * 60
-            if force:
-                purgeAfterSeconds = 0
-            return SimpleCache(cacheExpirySeconds).cleanCache(purgeAfterSeconds)
-        else:
-            return None
-    except:
-        return None
 
 def extractSubCategory(subCategory, htmlContents):
     invisibleMenuTree = common.parseDOM(htmlContents, "ul", attrs = {'id' : 'main_menu'})
@@ -76,12 +37,8 @@ def extractSubCategory(subCategory, htmlContents):
     return subCategories
         
 def showSubCategories(url):
-    cacheKey = 'subcategory:%s:v1' % url
-    subCatList = getFromCache(cacheKey)
-    if subCatList == None:
-        htmlContents = callServiceApi('/')
-        subCatList = extractSubCategory(url, htmlContents)
-        setToCache(cacheKey, subCatList)
+    htmlContents = callServiceApi('/')
+    subCatList = extractSubCategory(url, htmlContents)
     for s in subCatList:
         subCatName = s['name'].encode('utf8')
         addDir(subCatName, '%s' % s['url'], 2, 'menu_logo.png')
@@ -116,23 +73,13 @@ def showShows(categoryId):
             addDir(showTitle, str(showId), 3, thumbnail)
     xbmcplugin.endOfDirectory(thisPlugin)
     
-def getShowListData(categoryId, forceRecache = False):
+def getShowListData(categoryId):
     url = categoryId
     if not url.startswith('/Category/List/'):
         url = '/Category/List/%s' % categoryId
-    cacheKey = 'showListData:v3:%s' % categoryId
-    showListData = None
-    if forceRecache:
-        showListData = None
-    else:
-        showListData = getFromCache(cacheKey)
-    if showListData:
-        return showListData
-    else:
-        htmlData = callServiceApi(url)
-        showListData = extractShowListData(htmlData, url)
-        setToCache(cacheKey, showListData)
-        return showListData
+    htmlData = callServiceApi(url)
+    showListData = extractShowListData(htmlData, url)
+    return showListData
         
 def extractShowListData(htmlData, url):
     showListData = {}
@@ -176,6 +123,7 @@ def playEpisode(episodeId):
         playLink = getEpisodePlayLink(episodeId, quality + 1)
         jsonData = callServiceApi(playLink, headers = headers)
         episodeDetails = json.loads(jsonData)
+        print episodeDetails
         if type(episodeDetails) is dict and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0:
             errorHeader = 'Media Error'
             errorMessage = 'Subscription is already expired or the item is not part of your subscription.'
@@ -216,12 +164,6 @@ def getSubscribedShowIds():
     return getSubscribedShows()[0]
     
 def getSubscribedShows():
-    showIdsKey = 'showIds:v1'
-    subscribedShowsKey = 'subscribedShows:v1'
-    showIds = getFromCache(showIdsKey)
-    subscribedShows = getFromCache(subscribedShowsKey)
-    if showIds and subscribedShows:
-        return showIds, subscribedShows
     jsonData = ''
     entitlementsData = getEntitlementsData()
     subscribedShows = []
@@ -252,9 +194,6 @@ def getSubscribedShows():
                     e['Show'] = e['Content']
                     subscribedShows.append(e)
                     showIds.append(e['CategoryId'])
-    if showIds and subscribedShows:
-        setToCache(showIdsKey, showIds)
-        setToCache(subscribedShowsKey, subscribedShows)
     return showIds, subscribedShows
     
 def normalizeCategoryName(categoryName):
@@ -286,7 +225,7 @@ def showSubscribedShows(url):
             categoryId = s['MainCategoryId']
             # get the showListData only once. don't get it if it's already set
             try:
-                showListData = showListData if showListData else getShowListData(categoryId, forceRecache = True)
+                showListData = showListData if showListData else getShowListData(categoryId)
             except:
                 pass
             if showId in showListData:
@@ -295,7 +234,7 @@ def showSubscribedShows(url):
                 # the show must be new and the thumbnail is probably not in cache ...
                 # ... or the first set of thumbnails might be from a LITE subscription (less shows vs PREMIUM)
                 try:
-                    showListData = getShowListData(categoryId, forceRecache = True)
+                    showListData = getShowListData(categoryId)
                 except:
                     pass
                 if showId in showListData:
@@ -437,7 +376,6 @@ name=None
 mode=None
 page=1
 thumbnail = ''
-isCacheEnabled = True if thisAddon.getSetting('isCacheEnabled') == 'true' else False
 onlinePremierUrl = '/Category/List/1962'
 
 

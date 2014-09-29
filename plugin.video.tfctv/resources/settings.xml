@@ -13,10 +13,4 @@
         <setting id="showSubscribedShowsThumbnails" type="bool" label="50105" default="false" visible="false"/>
         <setting id="announcement" type="text" label="50106" default="" visible="false"/>
     </category>
-    <category label="50300">
-        <setting id="isCacheEnabled" type="bool" label="50303" default="false"/>
-        <setting id="cacheHours" type="labelenum" label="50301" default="1" values="1|3|6|12|24|36|48"/>
-        <setting id="purgeAfterDays" type="labelenum" label="50302" default="15" values="1|7|15|30"/>
-        <setting id="clearCacheOnNextEntry" type="bool" label="50304" default="false"/>
-    </category>
 </settings>

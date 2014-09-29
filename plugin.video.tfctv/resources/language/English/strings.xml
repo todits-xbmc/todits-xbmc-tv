@@ -13,13 +13,6 @@
     <string id="50201">Email Address</string>
     <string id="50202">Password</string>
     
-    <string id="50300">Cache Settings</string>
-    <string id="50301">Cache expiration (Hours)</string>
-    <string id="50302">Purge every (Days)</string>
-    <string id="50303">Enable Caching</string>
-    <string id="50304">Clear cache on next plugin entry</string>
-    <string id="50305">Subscribed Shows Thumbnail Expiration (Days)</string>
-    
     <string id="50203">Login Retries</string>
     <string id="56000">Login Failed</string>
     <string id="56001">'TFC.tv Subscription Information'</string>
