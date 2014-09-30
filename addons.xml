@@ -22,7 +22,7 @@
     
     <addon id="plugin.video.tfctv"
            name="TFC.tv"
-           version="0.0.36"
+           version="0.0.37"
            provider-name="todits.xbmc">
       <requires>
         <import addon="xbmc.python" version="2.1.0"/>

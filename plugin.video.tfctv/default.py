@@ -10,7 +10,7 @@ common.plugin = thisAddon.getAddonInfo('name')
 # common.dbglevel = 3 # Default
 
 def showCategories():
-    accountChanged = checkAccountChange()
+    checkAccountChange()
     categories = [
         { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
         { 'name' : 'Shows', 'url' : '/Category/Shows', 'mode' : 1 },
@@ -37,7 +37,6 @@ def extractSubCategory(htmlContents):
     return subCategories
         
 def showSubCategories(url):
-    print url
     htmlContents = callServiceApi(url)
     subCatList = extractSubCategory(htmlContents)
     for s in subCatList:
@@ -119,29 +118,17 @@ def playEpisode(episodeId):
     notificationCall = ''
     hasError = False
     headers = [('X-Requested-With', 'XMLHttpRequest')]
+    loginData = {}
     for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
         playLink = getEpisodePlayLink(episodeId, quality + 1)
-        jsonData = callServiceApi(playLink, headers = headers)
-        episodeDetails = json.loads(jsonData)
-        print episodeDetails
-        if type(episodeDetails) is dict and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0:
-            errorHeader = 'Media Error'
-            errorMessage = 'Subscription is already expired or the item is not part of your subscription.'
-            notificationCall = 'Notification(%s, %s)' % (errorHeader, errorMessage)
-            hasError = True
-        errorCode = episodeDetails['errorCode']
-        if errorCode == 0:
+        if playLink:
+            jsonData = callServiceApi(playLink, headers = headers)
+            episodeDetails = json.loads(jsonData)
+        if episodeDetails and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] == 0:
             break
         else:
-            loginData = login()
-            if type(loginData) is dict and loginData.has_key('errorCode') and loginData['errorCode'] != 0:
-                errorHeader = 'Login Error'
-                errorMessage = 'Could not login'
-                if loginData.has_key('errorMessage'):
-                    errorMessage = loginData['errorMessage']
-                notificationCall = 'Notification(%s, %s)' % (errorHeader, errorMessage)
-                hasError = True
-    if errorCode == 0:
+            login()
+    if episodeDetails and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] == 0:
         from urlparse import urlparse
         url = episodeDetails['data']['Url']
         urlParsed = urlparse(url)
@@ -151,14 +138,14 @@ def playEpisode(episodeId):
         liz.setProperty('IsPlayable', 'true')
         return xbmcplugin.setResolvedUrl(thisPlugin, True, liz)
     else:
-        if hasError:
-            xbmc.executebuiltin(notificationCall)
+        if (not episodeDetails) or (episodeDetails and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0):
+            xbmc.executebuiltin('Notification(%s, %s)' % ('Media Error', 'Subscription is already expired or the item is not part of your subscription.'))
     return False
 
 def getEpisodePlayLink(episodeId, dataMode):
     episodeDetails = callServiceApi('/Episode/Details/%s' % episodeId)
     playLink = common.parseDOM(episodeDetails, "a", attrs = {'class' : 'playmode', 'data-mode' : '%s' % dataMode}, ret = 'data-href')
-    return playLink[0]
+    return playLink[0] if len(playLink) > 0 else ''
         
 def getSubscribedShowIds():
     return getSubscribedShows()[0]
@@ -295,6 +282,8 @@ def login():
     formdata = { "EmailAddress" : emailAddress, "Password": password }
     jsonData = callServiceApi("/User/_Login", formdata)
     loginData = json.loads(jsonData)
+    if (not loginData) or (loginData and loginData.has_key('errorCode') and loginData['errorCode'] != 0):
+        xbmc.executebuiltin('Notification(%s, %s)' % ('Login Error', loginData['errorMessage'] if loginData.has_key('errorMessage') else 'Could not login'))
     return loginData
     
 def checkAccountChange():
@@ -422,7 +411,7 @@ if cookieJarType == 'LWPCookieJar':
 
 if thisAddon.getSetting('announcement') != thisAddon.getAddonInfo('version'):
     messages = {
-        '0.0.34': 'Hello there! Your TFC.tv plugin has been updated.\n\nTFC.tv has undergone a lot of changes and the plugin needs to be updated to adjust to those changes. The plugin should work just as before except for the "Show subscribed shows thumbnails" which is currently disabled. The previously named "Entertainment" category has been changed to "Shows" just as how TFC.tv refers to it now.\n\nIf you encounter anything that you think is a bug, please report it to the TFC.tv XBMC Forum thread (http://forum.xbmc.org/showthread.php?tid=155870) or to the plugin website (https://code.google.com/p/todits-xbmc/).'
+        '0.0.0': 'Your TFC.tv plugin has been updated.\n\nTFC.tv has undergone a lot of changes and the plugin needs to be updated to adjust to those changes.\n\nIf you encounter anything that you think is a bug, please report it to the TFC.tv XBMC Forum thread (http://forum.xbmc.org/showthread.php?tid=155870) or to the plugin website (https://code.google.com/p/todits-xbmc/).'
         }
     if thisAddon.getAddonInfo('version') in messages:
         showMessage(messages[thisAddon.getAddonInfo('version')], xbmcaddon.Addon().getLocalizedString(50106))
