@@ -1,3 +1,6 @@
+0.0.38
+    Fix for TFC.tv changes (login, episode list, etc)
+    Disabled menu items
 0.0.37
     Changed startup account check
     Better error handling
