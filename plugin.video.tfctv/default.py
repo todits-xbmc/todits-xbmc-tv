@@ -13,13 +13,13 @@ baseUrl = 'http://tfc.tv'
 def showCategories():
     checkAccountChange()
     categories = [
-        { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 },
+        # { 'name' : 'Subscribed Shows', 'url' : 'SubscribedShows', 'mode' : 10 }, #hide subscribed shows while we're having issues with the tfc.tv changes
         { 'name' : 'Shows', 'url' : '/Category/Shows', 'mode' : 1 },
         { 'name' : 'News', 'url' : '/Category/News', 'mode' : 1 },
         { 'name' : 'Movies', 'url' : '/Category/Movies', 'mode' : 1 },
         # { 'name' : 'Live', 'url' : '/Category/Live', 'mode' : 1 },
-        { 'name' : 'Free TV', 'url' : '929', 'mode' : 3 },
-        { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 }
+        # { 'name' : 'Free TV', 'url' : '929', 'mode' : 3 }, # hide free tv while we're having issues with the tfc.tv changes
+        # { 'name' : 'Subscription Information', 'url' : 'SubscriptionInformation', 'mode' : 12 } #hide subscription information while we're having issues with the tfc.tv changes
     ]
     for c in categories:
         addDir(c['name'], c['url'], c['mode'], 'icon.png')
@@ -51,6 +51,8 @@ def showShows(categoryId):
         return
     listSubscribedFirst = True if thisAddon.getSetting('listSubscribedFirst') == 'true' else False
     italiciseUnsubscribed = True if thisAddon.getSetting('italiciseUnsubscribed') == 'true' else False
+    listSubscribedFirst = False
+    italiciseUnsubscribed = False
     subscribedShowIds = []
     if listSubscribedFirst or italiciseUnsubscribed: 
         # make an API call only if we're checking against subscribed shows
