@@ -5,6 +5,7 @@ import CommonFunctions
 common = CommonFunctions
 thisAddon = xbmcaddon.Addon()
 common.plugin = thisAddon.getAddonInfo('name')
+baseUrl = 'http://tfc.tv'
 
 # common.dbg = True # Default
 # common.dbglevel = 3 # Default
@@ -94,19 +95,27 @@ def extractShowListData(htmlData, url):
     return showListData
         
 def showEpisodes(showId):
-    url = '/Show/GetListOfEpisodes/%s' % showId
     itemsPerPage = int(thisAddon.getSetting('itemsPerPage'))
-    params = { 'page' : page, 'pageSize' : itemsPerPage }
-    jsonData = callServiceApi(url, params)
-    episodeList = json.loads(jsonData)
-    for e in episodeList['Data']:
+    url = '/Show/GetMoreEpisodes/%s/?page=%s&pageSize=%s' % (showId, page, itemsPerPage)
+    episodes_html = callServiceApi(url)
+    episode_data = common.parseDOM(episodes_html, "div")
+    episodes_returned = 0
+    for e in episode_data:
+        episodes_returned = episodes_returned + 1
+        episode_hrefs = common.parseDOM(e, "a", ret = 'href') # there will be at least 2 hrefs but they are all duplicates
+        episode_id = episode_hrefs[0].replace('/Episode/Details/', '').split('|')[0]
+        image_url = common.parseDOM(e, "img", ret = 'src')[0]
+        title_div = common.parseDOM(e, "div", attrs = { 'class' : 'e-title' })[0]
+        title_tag = common.parseDOM(title_div, "a")[0]
         kwargs = { 'listProperties' : { 'IsPlayable' : 'true' } }
-        if 'Synopsis' in e:
-            kwargs['listInfos'] = { 'video' : { 'plot' : e['Synopsis'] } } 
-        addDir(e['DateAiredStr'].encode('utf8'), str(e['EpisodeId']), 4, e['ImgUrl'], isFolder = False, **kwargs)
-    totalEpisodes = int(episodeList['Total'])
-    episodeCount = page * itemsPerPage
-    if totalEpisodes > episodeCount:
+        # if 'Synopsis' in e:
+            # kwargs['listInfos'] = { 'video' : { 'plot' : e['Synopsis'] } } 
+        episode_title_date = title_tag.split('-')
+        episode_title = title_tag
+        if len(episode_title_date) > 1:
+            episode_title = episode_title_date[1].strip()
+        addDir(episode_title.encode('utf8'), episode_id, 4, image_url, isFolder = False, **kwargs)
+    if episodes_returned == itemsPerPage:
         addDir("Next >>",  showId, 3, '', page + 1)
     xbmcplugin.endOfDirectory(thisPlugin)
         
@@ -118,7 +127,6 @@ def playEpisode(episodeId):
     notificationCall = ''
     hasError = False
     headers = [('X-Requested-With', 'XMLHttpRequest')]
-    loginData = {}
     for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
         playLink = getEpisodePlayLink(episodeId, quality + 1)
         if playLink:
@@ -264,27 +272,30 @@ def showSubcriptionInformation():
         message += entitlementEntry
     showMessage(message, xbmcaddon.Addon().getLocalizedString(56001))
 
-def callServiceApi(path, params = {}, headers = []):
+def callServiceApi(path, params = {}, headers = [], base_url = baseUrl):
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
     headers.append(('User-Agent', userAgent))
     opener.addheaders = headers
     if params:
         data_encoded = urllib.urlencode(params)
-        response = opener.open(baseUrl + path, data_encoded)
+        response = opener.open(base_url + path, data_encoded)
     else:
-        response = opener.open(baseUrl + path)
+        response = opener.open(base_url + path)
     return response.read()
 
 def login():
     cookieJar.clear()
+    login_page = callServiceApi("/User/Login")
+    form_login = common.parseDOM(login_page, "form", attrs = {'id' : 'form_login'})
+    request_verification_token = common.parseDOM(form_login[0], "input", attrs = {'name' : '__RequestVerificationToken'}, ret = 'value')
     emailAddress = thisAddon.getSetting('emailAddress')
     password = thisAddon.getSetting('password')
-    formdata = { "EmailAddress" : emailAddress, "Password": password }
-    jsonData = callServiceApi("/User/_Login", formdata)
-    loginData = json.loads(jsonData)
-    if (not loginData) or (loginData and loginData.has_key('errorCode') and loginData['errorCode'] != 0):
-        xbmc.executebuiltin('Notification(%s, %s)' % ('Login Error', loginData['errorMessage'] if loginData.has_key('errorMessage') else 'Could not login'))
-    return loginData
+    formdata = { "login_email" : emailAddress, "login_pass": password, '__RequestVerificationToken' : request_verification_token[0] }
+    callServiceApi("/User/_Login", formdata, headers = [('Referer', 'http://tfc.tv/User/Login')], base_url = 'https://tfc.tv')
+    # loginData = json.loads(jsonData)
+    # if (not loginData) or (loginData and loginData.has_key('errorCode') and loginData['errorCode'] != 0):
+        # xbmc.executebuiltin('Notification(%s, %s)' % ('Login Error', loginData['errorMessage'] if loginData.has_key('errorMessage') else 'Could not login'))
+    # return loginData
     
 def checkAccountChange():
     emailAddress = thisAddon.getSetting('emailAddress')
@@ -321,7 +332,7 @@ def getParams():
                             param[splitparams[0]]=splitparams[1]
     return param
 
-def addDir(name, url, mode, thumbnail, page = 1, isFolder = True, **kwargs):
+def addDir(name, url, mode, thumbnail, page = 0, isFolder = True, **kwargs):
     u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.quote_plus(name)+"&page="+str(page)+"&thumbnail="+urllib.quote_plus(thumbnail)
     liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=thumbnail)
     liz.setInfo( type="Video", infoLabels={ "Title": name } )
@@ -344,8 +355,7 @@ def showMessage(message, title = xbmcaddon.Addon().getLocalizedString(50107)):
     win.getControl(5).setText(message)
 
 thisPlugin = int(sys.argv[1])
-userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.48 Safari/537.36'
-baseUrl = 'http://tfc.tv'
+userAgent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.74 Safari/537.36'
 cookieJar = cookielib.CookieJar()
 cookieFile = ''
 cookieJarType = ''
@@ -363,7 +373,7 @@ params=getParams()
 url=None
 name=None
 mode=None
-page=1
+page=0
 thumbnail = ''
 onlinePremierUrl = '/Category/List/1962'
 
