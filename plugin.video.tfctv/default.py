@@ -112,11 +112,7 @@ def showEpisodes(showId):
         kwargs = { 'listProperties' : { 'IsPlayable' : 'true' } }
         # if 'Synopsis' in e:
             # kwargs['listInfos'] = { 'video' : { 'plot' : e['Synopsis'] } } 
-        episode_title_date = title_tag.split('-')
-        episode_title = title_tag
-        if len(episode_title_date) > 1:
-            episode_title = episode_title_date[1].strip()
-        addDir(episode_title.encode('utf8'), episode_id, 4, image_url, isFolder = False, **kwargs)
+        addDir(title_tag.split('-')[-1].strip().encode('utf8'), episode_id, 4, image_url, isFolder = False, **kwargs)
     if episodes_returned == itemsPerPage:
         addDir("Next >>",  showId, 3, '', page + 1)
     xbmcplugin.endOfDirectory(thisPlugin)
