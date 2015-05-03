@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="repository.todits.xbmc.addons" name="todits.xbmc Add-ons" version="0.0.2" provider-name="todits.xbmc">
+<addon id="repository.todits.xbmc.addons" name="todits.xbmc Add-ons" version="0.0.3" provider-name="todits.xbmc">
     <extension point="xbmc.addon.repository" name="todits.xbmc Add-ons">
         <info compressed="false">https://github.com/todits-xbmc/todits-xbmc-tv/raw/master/addons.xml</info>
         <checksum>https://github.com/todits-xbmc/todits-xbmc-tv/raw/master/addons.xml.md5</checksum>
-        <datadir zip="true">https://github.com/todits-xbmc/todits-xbmc-tv/raw/master/downloads/</datadir>
+        <datadir zip="true">https://github.com/todits-xbmc/todits-xbmc-tv/raw/master/downloads</datadir>
     </extension>
     <extension point="xbmc.addon.metadata">
         <summary>XBMC Plugins</summary>
