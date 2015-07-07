@@ -1,5 +1,6 @@
 import sys, urllib, urllib2, json, cookielib, time, os.path, hashlib
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
+from operator import itemgetter
 
 import CommonFunctions
 common = CommonFunctions
@@ -60,19 +61,33 @@ def showShows(categoryId):
     if listSubscribedFirst:
         unsubscribedShows = []
         # try to minimize loops
+        sortedShowInfos = []
+        sortedUnsubscibed = []
         for showId, (showName, thumbnail) in showListData.iteritems():
             if showId in subscribedShowIds:
-                addDir(showName, str(showId), 3, thumbnail)
+                sortedShowInfos.append((showName.lower(), showName, str(showId), 3, thumbnail))
+                # addDir(showName, str(showId), 3, thumbnail)
             else:
                 showTitle = '[I]' + showName + '[/I]' if italiciseUnsubscribed else showName
                 # we'll add these unsubscribed shows later
-                unsubscribedShows.append((showId, showTitle, thumbnail))
-        for showId, showTitle, thumbnail in unsubscribedShows:
-            addDir(showTitle, str(showId), 3, thumbnail)
+                # unsubscribedShows.append((showId, showTitle, thumbnail))
+                sortedUnsubscibed.append((showName.lower(), showTitle, showId, 3, thumbnail))
+        sortedShowInfos = sorted(sortedShowInfos, key = itemgetter(0))
+        sortedUnsubscibed = sorted(sortedUnsubscibed, key = itemgetter(0))
+        for info in sortedShowInfos:
+            addDir(info[1], info[2], info[3], info[4])
+        # for showId, showTitle, thumbnail in unsubscribedShows:
+        for info in sortedUnsubscibed:
+            addDir(info[1], info[2], info[3], info[4])
     else:
+        sortedShowInfos = []
         for showId, (showName, thumbnail) in showListData.iteritems():
             showTitle = '[I]' + showName + '[/I]' if italiciseUnsubscribed and showId in subscribedShowIds else showName
-            addDir(showTitle, str(showId), 3, thumbnail)
+            sortedShowInfos.append((showName.lower(), showTitle, str(showId), 3, thumbnail))
+            # addDir(showTitle, str(showId), 3, thumbnail)
+        sortedShowInfos = sorted(sortedShowInfos, key = itemgetter(0))
+        for info in sortedShowInfos:
+            addDir(info[1], info[2], info[3], info[4])
     xbmcplugin.endOfDirectory(thisPlugin)
     
 def getShowListData(categoryId):
