@@ -132,8 +132,7 @@ def showEpisodes(showId):
         addDir("Next >>",  showId, 3, '', page + 1)
     xbmcplugin.endOfDirectory(thisPlugin)
         
-def playEpisode(episodeId):
-    quality = int(thisAddon.getSetting('quality'))
+def playEpisode(episode):
     errorCode = -1
     jsonData = ''
     episodeDetails = {}
@@ -141,19 +140,13 @@ def playEpisode(episodeId):
     hasError = False
     headers = [('X-Requested-With', 'XMLHttpRequest')]
     for i in range(int(thisAddon.getSetting('loginRetries')) + 1):
-        playLink = getEpisodePlayLink(episodeId, quality + 1)
-        if playLink:
-            jsonData = callServiceApi(playLink, headers = headers)
-            episodeDetails = json.loads(jsonData)
+        episodeDetails = get_media_info(episode)
         if episodeDetails and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] == 0:
             break
         else:
             login()
     if episodeDetails and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] == 0:
-        from urlparse import urlparse
         url = episodeDetails['data']['Url']
-        urlParsed = urlparse(url)
-        url = '%s://%s%s?%s' % (urlParsed.scheme, urlParsed.netloc, urllib.quote(urlParsed.path), urlParsed.query)
         liz=xbmcgui.ListItem(name, iconImage = "DefaultVideo.png", thumbnailImage = thumbnail, path = url)
         liz.setInfo( type="Video", infoLabels = { "Title": name } )
         liz.setProperty('IsPlayable', 'true')
@@ -162,12 +155,25 @@ def playEpisode(episodeId):
         if (not episodeDetails) or (episodeDetails and episodeDetails.has_key('errorCode') and episodeDetails['errorCode'] != 0):
             xbmc.executebuiltin('Notification(%s, %s)' % ('Media Error', 'Subscription is already expired or the item is not part of your subscription.'))
     return False
+    
+def get_media_info(episode):
+    import re
+    html = callServiceApi('/Episode/Details/%s' % episode)
+    body = common.parseDOM(html, "body")
+    scripts = common.parseDOM(body, "script")
+    episode_id = episode.split('/')[0]
+    media_info = None
+    api_bare_path = '/Ajax/GetMedia/%s' % (episode_id)
+    pattern = re.compile('{0}(\?p=[0-9])?'.format(api_bare_path), re.IGNORECASE)
+    for script in scripts:
+        line = script.strip();
+        match = pattern.search(line)
+        if match:
+            response = callServiceApi(match.group(0), headers = [('X-Requested-With', 'XMLHttpRequest')])
+            media_info = json.loads(response)
+            break
+    return media_info
 
-def getEpisodePlayLink(episodeId, dataMode):
-    episodeDetails = callServiceApi('/Episode/Details/%s' % episodeId)
-    playLink = common.parseDOM(episodeDetails, "a", attrs = {'class' : 'playmode', 'data-mode' : '%s' % dataMode}, ret = 'data-href')
-    return playLink[0] if len(playLink) > 0 else ''
-        
 def getSubscribedShowIds():
     return getSubscribedShows()[0]
     
@@ -368,7 +374,7 @@ def showMessage(message, title = xbmcaddon.Addon().getLocalizedString(50107)):
     win.getControl(5).setText(message)
 
 thisPlugin = int(sys.argv[1])
-userAgent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.74 Safari/537.36'
+userAgent = 'Mozilla/5.0(iPad; U; CPU OS 4_3 like Mac OS X; en-us) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8F191 Safari/6533.18.5'
 cookieJar = cookielib.CookieJar()
 cookieFile = ''
 cookieJarType = ''

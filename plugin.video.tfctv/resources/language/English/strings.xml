@@ -2,7 +2,6 @@
 <strings>
     <string id="50100">Settings</string>
     <string id="50101">Episodes Per Page</string>
-    <string id="50102">Quality</string>
     <string id="50103">List subscribed shows first</string>
     <string id="50104">Show unsubscribed shows in [I]Italics[/I]</string>
     <string id="50105">Show thumbnails in subscribed shows</string>
